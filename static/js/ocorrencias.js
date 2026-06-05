@@ -352,7 +352,10 @@ function gerarPDF(id) {
     const turma = getTurmaAluno(o.aluno_id);
     const aluno = getAluno(o.aluno_id);
     const responsavel = aluno ? aluno.responsavel : '-';
+    const matricula = aluno ? aluno.matricula : '-';
+    const contatoResponsavel = aluno ? aluno.contato_responsavel : '-';
     const numDoc = String(o.id).padStart(4, '0');
+    const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const conteudo = `
         <html>
@@ -360,41 +363,79 @@ function gerarPDF(id) {
             <meta charset="UTF-8">
             <title>Registro de Ocorrencia</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 40px; color: #222; }
-                h2 { text-align: center; margin-bottom: 4px; }
-                h3 { text-align: center; color: #555; margin-top: 0; }
-                .numero { text-align: right; font-size: 12px; color: #777; margin-bottom: 20px; }
-                .linha { border-top: 1px solid #ccc; margin: 20px 0; }
-                .campo { margin-bottom: 12px; line-height: 1.35; }
+                @page { size: A4; margin: 14mm; }
+                body { font-family: Arial, sans-serif; color: #222; font-size: 13px; line-height: 1.35; }
+                .topo { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #222; padding-bottom: 12px; }
+                .logo { width: 76px; height: 76px; object-fit: contain; }
+                .cabecalho { flex: 1; text-align: center; }
+                .cabecalho .orgao { font-size: 11px; text-transform: uppercase; color: #555; }
+                h2 { margin: 4px 0; font-size: 20px; }
+                h3 { margin: 0; color: #555; font-size: 16px; }
+                .numero { text-align: right; font-size: 12px; margin-top: 10px; color: #555; }
+                .secao { margin-top: 18px; }
+                .secao-titulo { font-weight: 700; background: #f1f3f5; border: 1px solid #ccc; padding: 7px 9px; margin-bottom: 8px; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 18px; }
+                .campo { margin-bottom: 7px; }
                 .campo span { font-weight: bold; }
-                .assinaturas { display: flex; justify-content: space-between; margin-top: 60px; }
-                .assinatura { text-align: center; width: 30%; }
-                .assinatura .linha-ass { border-top: 1px solid #333; margin-bottom: 6px; }
-                .log { font-size: 12px; color: #777; margin-top: 20px; }
+                .texto-box { border: 1px solid #ccc; min-height: 52px; padding: 8px; white-space: pre-wrap; }
+                .ciencia { border: 1px solid #ccc; padding: 9px; margin-top: 10px; font-size: 12px; }
+                .assinaturas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 38px 32px; margin-top: 58px; }
+                .assinatura { text-align: center; }
+                .assinatura .linha-ass { border-top: 1px solid #333; margin-bottom: 5px; }
+                .assinatura small { display: block; font-size: 11px; color: #555; }
+                .log { font-size: 12px; color: #777; margin-top: 12px; }
+                .rodape { text-align: center; margin-top: 28px; font-size: 11px; color: #777; }
             </style>
         </head>
         <body>
-            <h2>EEEP Governador Virgilio Tavora</h2>
-            <h3>Registro de Ocorrencia</h3>
-            <div class="numero">Documento N\u00ba ${numDoc}</div>
-            <div class="linha"></div>
+            <div class="topo">
+                <img class="logo" src="${logoUrl}" onerror="this.style.display='none'">
+                <div class="cabecalho">
+                    <div class="orgao">Secretaria da Educacao do Estado do Ceara</div>
+                    <h2>EEEP Governador Virgilio Tavora</h2>
+                    <h3>Registro de Ocorrencia Escolar</h3>
+                </div>
+            </div>
+            <div class="numero">Documento N\u00ba ${numDoc} | Impresso em ${new Date().toLocaleString('pt-BR')}</div>
 
-            <div class="campo"><span>Aluno:</span> ${nomeAluno}</div>
-            <div class="campo"><span>Turma:</span> ${turma}</div>
-            <div class="campo"><span>Responsavel:</span> ${responsavel}</div>
-            <div class="campo"><span>Data:</span> ${o.data}</div>
-            <div class="campo"><span>N\u00ba da Ocorrencia:</span> ${o.numero_ocorrencia}\u00aa ocorrencia</div>
+            <div class="secao">
+                <div class="secao-titulo">1. Identificacao do aluno</div>
+                <div class="grid">
+                    <div class="campo"><span>Aluno:</span> ${nomeAluno}</div>
+                    <div class="campo"><span>Matricula:</span> ${matricula}</div>
+                    <div class="campo"><span>Turma:</span> ${turma}</div>
+                    <div class="campo"><span>Data da ocorrencia:</span> ${o.data}</div>
+                    <div class="campo"><span>Responsavel:</span> ${responsavel}</div>
+                    <div class="campo"><span>Contato:</span> ${contatoResponsavel}</div>
+                </div>
+            </div>
 
-            <div class="linha"></div>
+            <div class="secao">
+                <div class="secao-titulo">2. Dados da ocorrencia</div>
+                <div class="grid">
+                    <div class="campo"><span>N\u00ba da ocorrencia do aluno:</span> ${o.numero_ocorrencia}\u00aa ocorrencia</div>
+                    <div class="campo"><span>Tipo:</span> ${o.tipo}</div>
+                    <div class="campo"><span>Gravidade:</span> ${o.gravidade || 'Leve'}</div>
+                    <div class="campo"><span>Status:</span> ${o.status || 'Aberta'}</div>
+                    <div class="campo"><span>Registrado por:</span> ${o.registrado_por}</div>
+                    <div class="campo"><span>Responsavel notificado:</span> ${o.responsavel_notificado ? 'Sim' : 'Nao'}</div>
+                </div>
+            </div>
 
-            <div class="campo"><span>Tipo:</span> ${o.tipo}</div>
-            <div class="campo"><span>Gravidade:</span> ${o.gravidade || 'Leve'}</div>
-            <div class="campo"><span>Status:</span> ${o.status || 'Aberta'}</div>
-            <div class="campo"><span>Descricao:</span> ${o.descricao}</div>
-            <div class="campo"><span>Medida tomada:</span> ${o.medida}</div>
-            <div class="campo"><span>Acoes tomadas:</span> ${o.acoes_tomadas || '-'}</div>
-            <div class="campo"><span>Registrado por:</span> ${o.registrado_por}</div>
-            <div class="campo"><span>Responsavel notificado:</span> ${o.responsavel_notificado ? 'Sim' : 'Nao'}</div>
+            <div class="secao">
+                <div class="secao-titulo">3. Descricao do ocorrido</div>
+                <div class="texto-box">${o.descricao || '-'}</div>
+            </div>
+
+            <div class="secao">
+                <div class="secao-titulo">4. Medidas e encaminhamentos</div>
+                <div class="campo"><span>Medida tomada:</span> ${o.medida}</div>
+                <div class="campo"><span>Acoes tomadas:</span></div>
+                <div class="texto-box">${o.acoes_tomadas || '-'}</div>
+                <div class="ciencia">
+                    Declaro estar ciente das informacoes registradas neste documento e das medidas adotadas pela escola.
+                </div>
+            </div>
 
             ${o.editado_por ? `<div class="log">* Editado por ${o.editado_por} em ${new Date(o.editado_em).toLocaleString('pt-BR')}</div>` : ''}
 
@@ -402,23 +443,26 @@ function gerarPDF(id) {
                 <div class="assinatura">
                     <div class="linha-ass"></div>
                     <div>Aluno</div>
-                    <div style="font-size:12px">${nomeAluno}</div>
+                    <small>${nomeAluno}</small>
                 </div>
                 <div class="assinatura">
                     <div class="linha-ass"></div>
                     <div>Responsavel</div>
-                    <div style="font-size:12px">${responsavel}</div>
+                    <small>${responsavel}</small>
                 </div>
                 <div class="assinatura">
                     <div class="linha-ass"></div>
                     <div>Coordenacao</div>
-                    <div style="font-size:12px">${o.registrado_por}</div>
+                    <small>${o.registrado_por}</small>
+                </div>
+                <div class="assinatura">
+                    <div class="linha-ass"></div>
+                    <div>Testemunha / Professor</div>
+                    <small>Nome e assinatura</small>
                 </div>
             </div>
 
-            <div style="text-align:center; margin-top:40px; font-size:12px; color:#777;">
-                Impresso em ${new Date().toLocaleString('pt-BR')}
-            </div>
+            <div class="rodape">Documento gerado pelo Sistema de Gestao Escolar</div>
         </body>
         </html>
     `;

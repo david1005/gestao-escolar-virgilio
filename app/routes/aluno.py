@@ -87,7 +87,15 @@ def criar_curso(curso: CursoCreate, db: Session = Depends(get_db), usuario: Usua
 
 @router.get("/cursos/")
 def listar_cursos(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
-    return db.query(Curso).order_by(Curso.nome).all()
+    query = db.query(Curso)
+    if usuario.perfil == "coordenador":
+        query = query.filter(Curso.id.in_(get_curso_ids_usuario(usuario)))
+    elif usuario.perfil == "diretor_turma":
+        turma = db.query(Turma).filter(Turma.id == usuario.turma_id).first()
+        if not turma:
+            return []
+        query = query.filter(Curso.id == turma.curso_id)
+    return query.order_by(Curso.nome).all()
 
 
 @router.post("/turmas/", response_model=schemas.Turma)
@@ -104,7 +112,12 @@ def criar_turma(turma: TurmaCreate, db: Session = Depends(get_db), usuario: Usua
 
 @router.get("/turmas/")
 def listar_turmas(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
-    return db.query(Turma).order_by(Turma.ano, Turma.letra).all()
+    query = db.query(Turma)
+    if usuario.perfil == "coordenador":
+        query = query.filter(Turma.curso_id.in_(get_curso_ids_usuario(usuario)))
+    elif usuario.perfil == "diretor_turma":
+        query = query.filter(Turma.id == usuario.turma_id)
+    return query.order_by(Turma.ano, Turma.letra).all()
 
 
 @router.post("/alunos/", response_model=schemas.Aluno)
