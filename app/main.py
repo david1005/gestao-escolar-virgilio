@@ -11,8 +11,10 @@ from app.routes import ocorrencia as ocorrencia_routes
 from app.routes import dashboard as dashboard_routes
 from app.routes import auth as auth_routes
 from app.routes import sistema as sistema_routes
-from app.auth import get_usuario_atual, tem_permissao
+from app.auth import get_usuario_atual, tem_permissao, hash_senha
 from app.models.usuario import Usuario
+from app.database import SessionLocal
+import os
 
 Base.metadata.create_all(bind=engine)
 
@@ -75,6 +77,27 @@ def garantir_colunas_auditoria():
                 conn.execute(text(comando))
 
 garantir_colunas_auditoria()
+
+def garantir_admin_inicial():
+    db = SessionLocal()
+    try:
+        if db.query(Usuario).count() > 0:
+            return
+        email = os.getenv("ADMIN_EMAIL", "admin@teste.com")
+        senha = os.getenv("ADMIN_PASSWORD", "admin123")
+        nome = os.getenv("ADMIN_NAME", "Administrador")
+        db.add(Usuario(
+            nome=nome,
+            email=email,
+            senha_hash=hash_senha(senha),
+            perfil="admin",
+            ativo=1,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+garantir_admin_inicial()
 
 app = FastAPI(title="Sistema de Gestão Escolar")
 
