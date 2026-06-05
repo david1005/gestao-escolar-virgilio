@@ -101,6 +101,30 @@ def listar_cursos(db: Session = Depends(get_db), usuario: Usuario = Depends(get_
     return query.order_by(Curso.nome).all()
 
 
+@router.put("/cursos/{curso_id}", response_model=schemas.Curso)
+def editar_curso(curso_id: int, dados: CursoCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    if usuario.perfil not in ["admin", "ppdt"]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    curso = db.query(Curso).filter(Curso.id == curso_id).first()
+    if not curso:
+        raise HTTPException(status_code=404, detail="Curso nao encontrado")
+
+    existente = db.query(Curso).filter(
+        Curso.nome == dados.nome,
+        Curso.id != curso_id,
+    ).first()
+    if existente:
+        raise HTTPException(status_code=400, detail="Curso ja cadastrado")
+
+    curso.nome = dados.nome
+    curso.sigla = dados.sigla
+    registrar_auditoria(db, usuario, "editou", "curso", curso.id, curso.nome)
+    db.commit()
+    db.refresh(curso)
+    return curso
+
+
 @router.post("/turmas/", response_model=schemas.Turma)
 def criar_turma(turma: TurmaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     if usuario.perfil not in ["admin", "ppdt"]:
@@ -131,6 +155,37 @@ def listar_turmas(db: Session = Depends(get_db), usuario: Usuario = Depends(get_
     elif usuario.perfil == "diretor_turma":
         query = query.filter(Turma.id == usuario.turma_id)
     return query.order_by(Turma.ano, Turma.letra).all()
+
+
+@router.put("/turmas/{turma_id}", response_model=schemas.Turma)
+def editar_turma(turma_id: int, dados: TurmaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    if usuario.perfil not in ["admin", "ppdt"]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    turma = db.query(Turma).filter(Turma.id == turma_id).first()
+    if not turma:
+        raise HTTPException(status_code=404, detail="Turma nao encontrada")
+
+    curso = db.query(Curso).filter(Curso.id == dados.curso_id).first()
+    if not curso:
+        raise HTTPException(status_code=404, detail="Curso nao encontrado")
+
+    existente = db.query(Turma).filter(
+        Turma.ano == dados.ano,
+        Turma.letra == dados.letra,
+        Turma.curso_id == dados.curso_id,
+        Turma.id != turma_id,
+    ).first()
+    if existente:
+        raise HTTPException(status_code=400, detail="Turma ja cadastrada para este curso")
+
+    turma.ano = dados.ano
+    turma.letra = dados.letra
+    turma.curso_id = dados.curso_id
+    registrar_auditoria(db, usuario, "editou", "turma", turma.id, f"{turma.ano}{turma.letra}")
+    db.commit()
+    db.refresh(turma)
+    return turma
 
 
 @router.post("/alunos/", response_model=schemas.Aluno)

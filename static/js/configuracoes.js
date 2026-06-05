@@ -171,13 +171,18 @@ function renderCursosTurmas() {
     if (!listaCursos || !listaTurmas || !selectCurso) return;
 
     if (!cursos.length) {
-        listaCursos.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhum curso cadastrado.</td></tr>';
+        listaCursos.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum curso cadastrado.</td></tr>';
         selectCurso.innerHTML = '<option value="">Cadastre um curso primeiro</option>';
     } else {
         listaCursos.innerHTML = cursos.map(c => `
             <tr>
                 <td>${textoSeguro(c.nome)}</td>
                 <td>${textoSeguro(c.sigla || '-')}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarCurso(${c.id})" title="Editar curso">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
             </tr>
         `).join('');
         selectCurso.innerHTML = '<option value="">Selecione o curso</option>' + cursos.map(c => (
@@ -186,7 +191,7 @@ function renderCursosTurmas() {
     }
 
     if (!turmas.length) {
-        listaTurmas.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhuma turma cadastrada.</td></tr>';
+        listaTurmas.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhuma turma cadastrada.</td></tr>';
         return;
     }
 
@@ -196,6 +201,11 @@ function renderCursosTurmas() {
             <tr>
                 <td>${t.ano}º ${textoSeguro(t.letra)}</td>
                 <td>${textoSeguro(curso ? curso.nome : '-')}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarTurma(${t.id})" title="Editar turma">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
             </tr>
         `;
     }).join('');
@@ -253,6 +263,84 @@ async function criarTurma() {
 
     const erro = await res.json().catch(() => ({}));
     alert(erro.detail || 'Erro ao criar turma.');
+}
+
+async function editarCurso(id) {
+    const curso = cursos.find(c => c.id === id);
+    if (!curso) return;
+
+    const nome = prompt('Nome do curso:', curso.nome);
+    if (nome === null) return;
+
+    const sigla = prompt('Sigla do curso:', curso.sigla || '');
+    if (sigla === null) return;
+
+    const dados = {
+        nome: nome.trim(),
+        sigla: sigla.trim().toUpperCase()
+    };
+
+    if (!dados.nome || !dados.sigla) {
+        alert('Informe o nome e a sigla do curso.');
+        return;
+    }
+
+    const res = await fetch(`/api/cursos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+    });
+
+    if (res.ok) {
+        await carregarTudo();
+        alert('Curso atualizado com sucesso.');
+        return;
+    }
+
+    const erro = await res.json().catch(() => ({}));
+    alert(erro.detail || 'Erro ao atualizar curso.');
+}
+
+async function editarTurma(id) {
+    const turma = turmas.find(t => t.id === id);
+    if (!turma) return;
+
+    const anoTexto = prompt('Ano da turma (1, 2 ou 3):', turma.ano);
+    if (anoTexto === null) return;
+
+    const letra = prompt('Letra da turma:', turma.letra || '');
+    if (letra === null) return;
+
+    const cursoAtual = cursos.find(c => c.id === turma.curso_id);
+    const opcoes = cursos.map(c => `${c.id} - ${c.nome}`).join('\n');
+    const cursoTexto = prompt(`ID do curso:\n${opcoes}`, cursoAtual ? cursoAtual.id : '');
+    if (cursoTexto === null) return;
+
+    const dados = {
+        ano: parseInt(anoTexto),
+        letra: letra.trim().toUpperCase(),
+        curso_id: parseInt(cursoTexto)
+    };
+
+    if (![1, 2, 3].includes(dados.ano) || !dados.letra || !dados.curso_id) {
+        alert('Informe ano, letra e curso validos.');
+        return;
+    }
+
+    const res = await fetch(`/api/turmas/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+    });
+
+    if (res.ok) {
+        await carregarTudo();
+        alert('Turma atualizada com sucesso.');
+        return;
+    }
+
+    const erro = await res.json().catch(() => ({}));
+    alert(erro.detail || 'Erro ao atualizar turma.');
 }
 
 function formatarTamanho(bytes) {
