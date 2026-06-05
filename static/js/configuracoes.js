@@ -1,0 +1,235 @@
+let cursos = [];
+let turmas = [];
+let permissoes = {};
+const perfilAtual = window.perfilAtual || '';
+const modulos = ['alunos', 'registros', 'ocorrencias', 'dashboard', 'relatorios', 'usuarios', 'configuracoes', 'anexos'];
+
+async function carregarTudo() {
+    const [cfg, anos, perms, auditoria, backups, anexos, resCursos, resTurmas] = await Promise.all([
+        fetch('/api/sistema/configuracoes').then(r => r.json()),
+        fetch('/api/sistema/anos-letivos').then(r => r.json()),
+        fetch('/api/sistema/permissoes').then(r => r.json()),
+        fetch('/api/sistema/auditoria').then(r => r.json()),
+        perfilAtual === 'admin' ? fetch('/api/sistema/backups').then(r => r.json()) : Promise.resolve([]),
+        fetch('/api/sistema/anexos').then(r => r.json()),
+        fetch('/api/cursos/').then(r => r.json()),
+        fetch('/api/turmas/').then(r => r.json())
+    ]);
+    cursos = resCursos;
+    turmas = resTurmas;
+    permissoes = perms;
+    renderConfig(cfg);
+    renderAnos(anos);
+    renderPermissoes();
+    renderAuditoria(auditoria);
+    renderBackups(backups);
+    renderAnexos(anexos);
+    renderTurmasRelatorio();
+}
+
+function renderConfig(cfg) {
+    document.getElementById('config_escola_nome').value = cfg.escola_nome || '';
+    document.getElementById('config_escola_endereco').value = cfg.escola_endereco || '';
+    document.getElementById('config_escola_telefone').value = cfg.escola_telefone || '';
+    document.getElementById('config_responsavel_sistema').value = cfg.responsavel_sistema || '';
+}
+
+async function salvarConfiguracoes() {
+    const configuracoes = {
+        escola_nome: document.getElementById('config_escola_nome').value,
+        escola_endereco: document.getElementById('config_escola_endereco').value,
+        escola_telefone: document.getElementById('config_escola_telefone').value,
+        responsavel_sistema: document.getElementById('config_responsavel_sistema').value
+    };
+    const res = await fetch('/api/sistema/configuracoes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configuracoes })
+    });
+    alert(res.ok ? 'Configuracoes salvas.' : 'Erro ao salvar configuracoes.');
+}
+
+function renderAnos(anos) {
+    const tbody = document.getElementById('listaAnos');
+    if (!anos.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum ano letivo cadastrado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = anos.map(a => `
+        <tr>
+            <td>${a.nome}</td>
+            <td>${a.data_inicio} ate ${a.data_fim}</td>
+            <td>${a.ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>'}</td>
+            <td><button class="btn btn-sm btn-outline-primary" onclick="ativarAno(${a.id})" ${a.ativo ? 'disabled' : ''}>Ativar</button></td>
+        </tr>
+    `).join('');
+}
+
+async function criarAnoLetivo() {
+    const dados = {
+        nome: document.getElementById('anoNome').value,
+        ano: parseInt(document.getElementById('anoNumero').value),
+        data_inicio: document.getElementById('anoInicio').value,
+        data_fim: document.getElementById('anoFim').value,
+        ativo: document.getElementById('anoAtivo').checked
+    };
+    const res = await fetch('/api/sistema/anos-letivos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+    });
+    if (res.ok) carregarTudo();
+    else alert('Erro ao criar ano letivo.');
+}
+
+async function ativarAno(id) {
+    await fetch(`/api/sistema/anos-letivos/${id}/ativar`, { method: 'PUT' });
+    carregarTudo();
+}
+
+function renderPermissoes() {
+    const select = document.getElementById('permissaoPerfil');
+    select.innerHTML = Object.keys(permissoes).map(p => `<option value="${p}">${p}</option>`).join('');
+    renderPermissoesPerfil();
+}
+
+function renderPermissoesPerfil() {
+    const perfil = document.getElementById('permissaoPerfil').value;
+    const marcadas = new Set(permissoes[perfil] || []);
+    document.getElementById('permissoesChecks').innerHTML = modulos.map(m => `
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" value="${m}" id="perm_${m}" ${marcadas.has('*') || marcadas.has(m) ? 'checked' : ''}>
+            <label class="form-check-label" for="perm_${m}">${m}</label>
+        </div>
+    `).join('');
+}
+
+async function salvarPermissoes() {
+    const perfil = document.getElementById('permissaoPerfil').value;
+    const selecionadas = Array.from(document.querySelectorAll('#permissoesChecks input:checked')).map(i => i.value);
+    const res = await fetch('/api/sistema/permissoes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ perfil, permissoes: selecionadas })
+    });
+    if (res.ok) {
+        permissoes[perfil] = selecionadas;
+        alert('Permissoes salvas.');
+    } else {
+        alert('Erro ao salvar permissoes.');
+    }
+}
+
+function renderAuditoria(lista) {
+    const tbody = document.getElementById('listaAuditoria');
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum log encontrado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lista.map(l => `
+        <tr>
+            <td>${new Date(l.criado_em).toLocaleString('pt-BR')}</td>
+            <td>${l.usuario_nome || '-'}</td>
+            <td>${l.acao}</td>
+            <td>${l.entidade}${l.entidade_id ? ` #${l.entidade_id}` : ''}</td>
+            <td>${l.detalhes || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function renderTurmasRelatorio() {
+    const select = document.getElementById('relatorioTurma');
+    select.innerHTML = '<option value="">Todas</option>' + turmas.map(t => {
+        const curso = cursos.find(c => c.id === t.curso_id);
+        return `<option value="${t.id}">${t.ano}º ${t.letra} - ${curso ? curso.nome : ''}</option>`;
+    }).join('');
+}
+
+function abrirRelatorio() {
+    const tipo = document.getElementById('relatorioTipo').value;
+    const turmaId = document.getElementById('relatorioTurma').value;
+    const params = new URLSearchParams({ tipo });
+    if (turmaId) params.set('turma_id', turmaId);
+    window.open(`/api/sistema/relatorios/oficial?${params.toString()}`, '_blank');
+}
+
+function formatarTamanho(bytes) {
+    if (!bytes) return '0 KB';
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderBackups(lista) {
+    const tbody = document.getElementById('listaBackups');
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum backup gerado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lista.map(b => `
+        <tr>
+            <td>${b.nome}</td>
+            <td>${formatarTamanho(b.tamanho)}</td>
+            <td>${new Date(b.criado_em).toLocaleString('pt-BR')}</td>
+            <td><a class="btn btn-sm btn-outline-success" href="${b.url}"><i class="bi bi-download me-1"></i>Baixar</a></td>
+        </tr>
+    `).join('');
+}
+
+async function gerarBackup() {
+    if (!confirm('Gerar backup do banco agora?')) return;
+    const res = await fetch('/api/sistema/backups', { method: 'POST' });
+    if (res.ok) {
+        const backup = await res.json();
+        alert(`Backup gerado: ${backup.nome}`);
+        carregarTudo();
+    } else {
+        const erro = await res.json();
+        alert(erro.detail || 'Erro ao gerar backup.');
+    }
+}
+
+function renderAnexos(lista) {
+    const tbody = document.getElementById('listaAnexos');
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum anexo enviado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lista.map(a => `
+        <tr>
+            <td><a href="${a.url}" target="_blank">${a.nome_original}</a></td>
+            <td>${a.entidade} #${a.entidade_id}</td>
+            <td>${a.enviado_por_nome || '-'}</td>
+            <td>${new Date(a.criado_em).toLocaleString('pt-BR')}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="excluirAnexo(${a.id})"><i class="bi bi-trash"></i></button></td>
+        </tr>
+    `).join('');
+}
+
+async function enviarAnexo() {
+    const arquivo = document.getElementById('anexoArquivo').files[0];
+    const entidadeId = document.getElementById('anexoEntidadeId').value;
+    if (!arquivo || !entidadeId) {
+        alert('Informe o ID e selecione um arquivo.');
+        return;
+    }
+    const form = new FormData();
+    form.append('entidade', document.getElementById('anexoEntidade').value);
+    form.append('entidade_id', entidadeId);
+    form.append('arquivo', arquivo);
+    const res = await fetch('/api/sistema/anexos', { method: 'POST', body: form });
+    if (res.ok) {
+        document.getElementById('anexoArquivo').value = '';
+        carregarTudo();
+    } else {
+        const erro = await res.json();
+        alert(erro.detail || 'Erro ao enviar anexo.');
+    }
+}
+
+async function excluirAnexo(id) {
+    if (!confirm('Excluir este anexo?')) return;
+    await fetch(`/api/sistema/anexos/${id}`, { method: 'DELETE' });
+    carregarTudo();
+}
+
+carregarTudo();
