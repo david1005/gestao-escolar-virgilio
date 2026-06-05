@@ -25,6 +25,16 @@ async function carregarTudo() {
     renderBackups(backups);
     renderAnexos(anexos);
     renderTurmasRelatorio();
+    renderCursosTurmas();
+}
+
+function textoSeguro(valor) {
+    return String(valor ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
 }
 
 function renderConfig(cfg) {
@@ -151,6 +161,98 @@ function abrirRelatorio() {
     const params = new URLSearchParams({ tipo });
     if (turmaId) params.set('turma_id', turmaId);
     window.open(`/api/sistema/relatorios/oficial?${params.toString()}`, '_blank');
+}
+
+function renderCursosTurmas() {
+    const listaCursos = document.getElementById('listaCursosConfig');
+    const listaTurmas = document.getElementById('listaTurmasConfig');
+    const selectCurso = document.getElementById('turmaCurso');
+
+    if (!listaCursos || !listaTurmas || !selectCurso) return;
+
+    if (!cursos.length) {
+        listaCursos.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhum curso cadastrado.</td></tr>';
+        selectCurso.innerHTML = '<option value="">Cadastre um curso primeiro</option>';
+    } else {
+        listaCursos.innerHTML = cursos.map(c => `
+            <tr>
+                <td>${textoSeguro(c.nome)}</td>
+                <td>${textoSeguro(c.sigla || '-')}</td>
+            </tr>
+        `).join('');
+        selectCurso.innerHTML = '<option value="">Selecione o curso</option>' + cursos.map(c => (
+            `<option value="${c.id}">${textoSeguro(c.nome)}</option>`
+        )).join('');
+    }
+
+    if (!turmas.length) {
+        listaTurmas.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhuma turma cadastrada.</td></tr>';
+        return;
+    }
+
+    listaTurmas.innerHTML = turmas.map(t => {
+        const curso = cursos.find(c => c.id === t.curso_id);
+        return `
+            <tr>
+                <td>${t.ano}º ${textoSeguro(t.letra)}</td>
+                <td>${textoSeguro(curso ? curso.nome : '-')}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function criarCurso() {
+    const nome = document.getElementById('cursoNome').value.trim();
+    const sigla = document.getElementById('cursoSigla').value.trim().toUpperCase();
+
+    if (!nome || !sigla) {
+        alert('Informe o nome e a sigla do curso.');
+        return;
+    }
+
+    const res = await fetch('/api/cursos/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, sigla })
+    });
+
+    if (res.ok) {
+        document.getElementById('cursoNome').value = '';
+        document.getElementById('cursoSigla').value = '';
+        await carregarTudo();
+        alert('Curso criado com sucesso.');
+        return;
+    }
+
+    const erro = await res.json().catch(() => ({}));
+    alert(erro.detail || 'Erro ao criar curso.');
+}
+
+async function criarTurma() {
+    const cursoId = parseInt(document.getElementById('turmaCurso').value);
+    const ano = parseInt(document.getElementById('turmaAno').value);
+    const letra = document.getElementById('turmaLetra').value.trim().toUpperCase();
+
+    if (!cursoId || !ano || !letra) {
+        alert('Informe curso, ano e letra da turma.');
+        return;
+    }
+
+    const res = await fetch('/api/turmas/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ curso_id: cursoId, ano, letra })
+    });
+
+    if (res.ok) {
+        document.getElementById('turmaLetra').value = '';
+        await carregarTudo();
+        alert('Turma criada com sucesso.');
+        return;
+    }
+
+    const erro = await res.json().catch(() => ({}));
+    alert(erro.detail || 'Erro ao criar turma.');
 }
 
 function formatarTamanho(bytes) {

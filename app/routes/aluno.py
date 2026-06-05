@@ -77,6 +77,9 @@ def calcular_previa_virada(db: Session):
 def criar_curso(curso: CursoCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     if usuario.perfil not in ["admin", "ppdt"]:
         raise HTTPException(status_code=403, detail="Acesso negado")
+    existente = db.query(Curso).filter(Curso.nome == curso.nome).first()
+    if existente:
+        raise HTTPException(status_code=400, detail="Curso ja cadastrado")
     db_curso = Curso(**curso.model_dump())
     db.add(db_curso)
     registrar_auditoria(db, usuario, "criou", "curso", None, curso.nome)
@@ -102,6 +105,16 @@ def listar_cursos(db: Session = Depends(get_db), usuario: Usuario = Depends(get_
 def criar_turma(turma: TurmaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     if usuario.perfil not in ["admin", "ppdt"]:
         raise HTTPException(status_code=403, detail="Acesso negado")
+    curso = db.query(Curso).filter(Curso.id == turma.curso_id).first()
+    if not curso:
+        raise HTTPException(status_code=404, detail="Curso nao encontrado")
+    existente = db.query(Turma).filter(
+        Turma.ano == turma.ano,
+        Turma.letra == turma.letra,
+        Turma.curso_id == turma.curso_id,
+    ).first()
+    if existente:
+        raise HTTPException(status_code=400, detail="Turma ja cadastrada para este curso")
     db_turma = Turma(**turma.model_dump())
     db.add(db_turma)
     registrar_auditoria(db, usuario, "criou", "turma", None, f"{turma.ano}{turma.letra}")
