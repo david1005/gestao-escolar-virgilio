@@ -84,7 +84,9 @@ def garantir_admin_inicial():
         if db.query(Usuario).count() > 0:
             return
         email = os.getenv("ADMIN_EMAIL", "admin@teste.com")
-        senha = os.getenv("ADMIN_PASSWORD", "admin123")
+        senha = os.getenv("ADMIN_PASSWORD", "Admin1234")
+        if len(senha.encode("utf-8")) > 72:
+            senha = senha.encode("utf-8")[:72].decode("utf-8", errors="ignore")
         nome = os.getenv("ADMIN_NAME", "Administrador")
         db.add(Usuario(
             nome=nome,

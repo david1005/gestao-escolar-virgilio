@@ -30,11 +30,15 @@ def verificar_senha(senha, hash):
     return pwd_context.verify(senha, hash)
 
 def hash_senha(senha):
+    if len((senha or "").encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="A senha nao pode ter mais de 72 bytes")
     return pwd_context.hash(senha)
 
 def validar_senha_forte(senha: str):
     if len(senha or "") < 8:
         raise HTTPException(status_code=400, detail="A senha deve ter pelo menos 8 caracteres")
+    if len((senha or "").encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="A senha nao pode ter mais de 72 bytes")
     if not re.search(r"[A-Za-z]", senha) or not re.search(r"\d", senha):
         raise HTTPException(status_code=400, detail="A senha deve conter letras e numeros")
 
