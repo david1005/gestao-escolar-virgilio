@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
@@ -45,6 +45,28 @@ def contar_historico_aluno(db: Session, aluno_id: int):
     registros = db.query(Registro).filter(Registro.aluno_id == aluno_id).count()
     ocorrencias = db.query(Ocorrencia).filter(Ocorrencia.aluno_id == aluno_id).count()
     return registros, ocorrencias
+
+
+def parse_data_nascimento(valor: str) -> date:
+    texto = (valor or "").strip()
+    if not texto:
+        raise ValueError("data_nascimento obrigatoria")
+
+    if " " in texto:
+        texto = texto.split(" ", 1)[0]
+
+    for formato in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(texto, formato).date()
+        except ValueError:
+            pass
+
+    if texto.replace(".", "", 1).isdigit():
+        numero = float(texto)
+        if numero > 0:
+            return date(1899, 12, 30) + timedelta(days=int(numero))
+
+    raise ValueError("data_nascimento deve estar em DD/MM/AAAA ou AAAA-MM-DD")
 
 
 def calcular_previa_virada(db: Session):
@@ -401,7 +423,7 @@ def importar_alunos_csv(
             aluno = Aluno(
                 nome=(linha.get("nome") or "").strip(),
                 matricula=matricula,
-                data_nascimento=date.fromisoformat((linha.get("data_nascimento") or "").strip()),
+                data_nascimento=parse_data_nascimento(linha.get("data_nascimento") or ""),
                 responsavel=(linha.get("responsavel") or "").strip(),
                 contato_responsavel=(linha.get("contato_responsavel") or "").strip(),
                 turma_id=turma_id,

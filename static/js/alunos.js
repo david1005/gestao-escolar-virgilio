@@ -354,8 +354,8 @@ function baixarModeloImportacao() {
     const linhas = [
         'sep=;',
         'nome;matricula;data_nascimento;responsavel;contato_responsavel;ano;letra;curso;status',
-        'Maria Exemplo;20260001;2010-03-15;Ana Responsavel;(88) 99999-0000;1;A;Enfermagem;ativo',
-        'Joao Exemplo;20260002;2010-07-22;Carlos Responsavel;(88) 98888-0000;1;B;Informática;ativo'
+        'Maria Exemplo;20260001;15/03/2010;Ana Responsavel;(88) 99999-0000;1;A;Enfermagem;ativo',
+        'Joao Exemplo;20260002;22/07/2010;Carlos Responsavel;(88) 98888-0000;1;B;Informatica;ativo'
     ];
     const csv = linhas.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -436,8 +436,8 @@ baixarModeloImportacao = function () {
     const linhas = [
         'sep=;',
         'nome;matricula;data_nascimento;responsavel;contato_responsavel;status',
-        'Maria Exemplo;20260001;2010-03-15;Ana Responsavel;(88) 99999-0000;ativo',
-        'Joao Exemplo;20260002;2010-07-22;Carlos Responsavel;(88) 98888-0000;ativo'
+        'Maria Exemplo;20260001;15/03/2010;Ana Responsavel;(88) 99999-0000;ativo',
+        'Joao Exemplo;20260002;22/07/2010;Carlos Responsavel;(88) 98888-0000;ativo'
     ];
     const csv = linhas.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
