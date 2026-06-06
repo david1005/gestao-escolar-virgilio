@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.aluno import Aluno, Turma, Curso
 from app.models.registro import Registro
 from app.models.ocorrencia import Ocorrencia
+from app.models.sistema import AnoLetivo
 from app.models.usuario import Usuario
 from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
 
@@ -48,11 +49,27 @@ def nome_turma(turma, curso):
         return "-"
     return f"{turma.ano}º {turma.letra} - {curso.nome if curso else ''}"
 
-def filtrar_por_data(itens, data_inicio=None, data_fim=None, mes=None, ano_letivo=None):
+def pertence_ao_ano_letivo(item, ano_letivo_id=None, ano_letivo_numero=None):
+    item_ano_id = getattr(item, "ano_letivo_id", None)
+    if ano_letivo_id and item_ano_id:
+        return item_ano_id == ano_letivo_id
+    if ano_letivo_numero and hasattr(item, "data"):
+        return item.data.year == ano_letivo_numero
+    return True
+
+
+def aluno_pertence_ao_ano_letivo(aluno, ano_letivo_id=None):
+    if not ano_letivo_id:
+        return True
+    aluno_ano_id = getattr(aluno, "ano_letivo_id", None)
+    return not aluno_ano_id or aluno_ano_id == ano_letivo_id
+
+
+def filtrar_por_data(itens, data_inicio=None, data_fim=None, mes=None, ano_letivo=None, ano_letivo_id=None):
     filtrados = []
     for item in itens:
         data_item = item.data
-        if ano_letivo and data_item.year != ano_letivo:
+        if not pertence_ao_ano_letivo(item, ano_letivo_id, ano_letivo):
             continue
         if mes and data_item.month != mes:
             continue
@@ -80,6 +97,8 @@ def dashboard_gerencial(
     usuario: Usuario = Depends(get_usuario_atual),
 ):
     exigir_dashboard(db, usuario)
+    ano_letivo_registro = db.query(AnoLetivo).filter(AnoLetivo.ano == ano_letivo).first() if ano_letivo else None
+    ano_letivo_id = ano_letivo_registro.id if ano_letivo_registro else None
     cursos = db.query(Curso).order_by(Curso.nome).all()
     turmas_query = db.query(Turma).order_by(Turma.ano, Turma.letra)
     if usuario.perfil == "diretor_turma":
@@ -105,13 +124,16 @@ def dashboard_gerencial(
     turmas_validas = {t.id for t in turmas}
 
     alunos_todos = db.query(Aluno).all()
-    alunos = [a for a in alunos_todos if aluno_no_recorte(a, turmas_validas, turma_id)]
+    alunos = [
+        a for a in alunos_todos
+        if aluno_no_recorte(a, turmas_validas, turma_id) and aluno_pertence_ao_ano_letivo(a, ano_letivo_id)
+    ]
     aluno_ids = {a.id for a in alunos}
 
     registros = [r for r in db.query(Registro).all() if r.aluno_id in aluno_ids]
     ocorrencias = [o for o in db.query(Ocorrencia).all() if o.aluno_id in aluno_ids]
-    registros = filtrar_por_data(registros, data_inicio, data_fim, mes, ano_letivo)
-    ocorrencias = filtrar_por_data(ocorrencias, data_inicio, data_fim, mes, ano_letivo)
+    registros = filtrar_por_data(registros, data_inicio, data_fim, mes, ano_letivo, ano_letivo_id)
+    ocorrencias = filtrar_por_data(ocorrencias, data_inicio, data_fim, mes, ano_letivo, ano_letivo_id)
 
     atrasos = [r for r in registros if r.tipo == "Atraso"]
     saidas = [r for r in registros if r.tipo != "Atraso"]

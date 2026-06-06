@@ -168,6 +168,8 @@ O sistema deve exportar alunos filtrados em arquivo CSV.
 
 O sistema deve promover alunos ativos do 1o para o 2o ano, do 2o para o 3o ano e marcar alunos do 3o ano como concluidos.
 
+Na virada de ano, as turmas cadastradas representam a estrutura fixa da escola. Assim, os alunos mudam de turma, mas a turma em si permanece cadastrada. Exemplo: alunos do 1o B de Informatica passam para o 2o B de Informatica; alunos do 2o B passam para o 3o B; alunos do 3o B ficam com status concluido; o 1o B fica vazio para receber novos alunos.
+
 ### RF21 - Previa da virada de ano
 
 Antes da virada, o sistema deve mostrar uma previa com quantidade de alunos promovidos, concluidos e sem destino.
@@ -235,6 +237,14 @@ O sistema deve permitir configurar nome da escola, endereco, telefone e responsa
 ### RF37 - Ano letivo
 
 O sistema deve permitir cadastrar e ativar anos letivos.
+
+### RF37.1 - Encerramento de ano letivo
+
+O sistema deve permitir encerrar um ano letivo, impedindo que ele continue como ano ativo.
+
+### RF37.2 - Vinculo de dados ao ano letivo
+
+O sistema deve vincular alunos, registros e ocorrencias ao ano letivo ativo no momento do cadastro.
 
 ### RF38 - Permissoes por perfil
 
@@ -304,6 +314,11 @@ O sistema deve oferecer rotina manual de backup e permitir armazenamento externo
 | RN08 | Alunos com historico nao devem ser removidos fisicamente sem criterio; podem ser arquivados por status. |
 | RN09 | Na virada de ano, alunos do 3o ano passam para concluido. |
 | RN10 | Na virada de ano, alunos do 1o e 2o ano so devem ser promovidos se existir turma destino. |
+| RN10.1 | As turmas sao consideradas estrutura fixa da escola; a virada altera a turma dos alunos, nao recria as turmas. |
+| RN10.2 | Apos a virada, as turmas de 1o ano ficam disponiveis para receber os novos alunos ingressantes. |
+| RN10.3 | Para promover uma turma, deve existir a turma equivalente no proximo ano, com mesma letra e curso. |
+| RN10.4 | Alunos, registros e ocorrencias novos devem ser vinculados automaticamente ao ano letivo ativo. |
+| RN10.5 | Um ano letivo encerrado nao deve permanecer ativo para novos lancamentos. |
 | RN11 | Coordenadores devem visualizar apenas alunos, turmas e cursos vinculados ao seu perfil. |
 | RN12 | Diretores de turma devem visualizar apenas dados da sua turma. |
 | RN13 | O administrador tem acesso total ao sistema. |
@@ -796,7 +811,7 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 - Exportacao PDF mais refinada.
 - Painel inicial personalizado por perfil.
 - Configuracao dinamica de motivos, medidas e tipos.
-- Controle de ciclo completo do ano letivo.
+- Aprimoramento do ciclo do ano letivo com historico de matriculas por turma em anos anteriores.
 - Logs de auditoria com filtros avancados.
 - Tela de restauracao de backup.
 - Manual do usuario dentro do proprio sistema.
@@ -818,4 +833,3 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 | Versao | Data | Descricao |
 |---|---|---|
 | 0.1 | 05/06/2026 | Criacao inicial da documentacao do projeto |
-

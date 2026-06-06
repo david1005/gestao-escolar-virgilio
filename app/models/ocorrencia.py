@@ -19,3 +19,4 @@ class Ocorrencia(Base):
     numero_ocorrencia = Column(Integer, nullable=False)
     editado_por = Column(String, nullable=True)
     editado_em = Column(DateTime, nullable=True)
+    ano_letivo_id = Column(Integer, nullable=True)

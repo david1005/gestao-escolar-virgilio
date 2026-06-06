@@ -12,3 +12,4 @@ class Registro(Base):
     motivo = Column(String, nullable=False)
     tem_documento = Column(Boolean, default=False)
     observacoes = Column(String, nullable=True)
+    ano_letivo_id = Column(Integer, nullable=True)

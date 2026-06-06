@@ -20,6 +20,7 @@ from app.models.ocorrencia import Ocorrencia
 from app.models.registro import Registro
 from app.models.sistema import Anexo, AnoLetivo, ConfiguracaoSistema, PermissaoPerfil
 from app.models.usuario import Usuario
+from app.services.ano_letivo import obter_ano_letivo_ativo
 
 router = APIRouter()
 
@@ -172,6 +173,8 @@ def salvar_configuracoes(dados: ConfiguracaoUpdate, request: Request, db: Sessio
 @router.get("/sistema/anos-letivos")
 def listar_anos_letivos(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_configuracoes(db, usuario)
+    obter_ano_letivo_ativo(db)
+    db.commit()
     return db.query(AnoLetivo).order_by(AnoLetivo.ano.desc()).all()
 
 
@@ -195,11 +198,26 @@ def ativar_ano_letivo(ano_id: int, request: Request, db: Session = Depends(get_d
     ano = db.query(AnoLetivo).filter(AnoLetivo.id == ano_id).first()
     if not ano:
         raise HTTPException(status_code=404, detail="Ano letivo nao encontrado")
+    if getattr(ano, "encerrado", False):
+        raise HTTPException(status_code=400, detail="Ano letivo encerrado nao pode ser ativado")
     db.query(AnoLetivo).update({AnoLetivo.ativo: False})
     ano.ativo = True
     registrar_auditoria_sistema(db, usuario, "ativou", "ano_letivo", ano.id, ano.nome, request)
     db.commit()
     return {"mensagem": "Ano letivo ativado"}
+
+
+@router.put("/sistema/anos-letivos/{ano_id}/encerrar")
+def encerrar_ano_letivo(ano_id: int, request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    exigir_configuracoes(db, usuario)
+    ano = db.query(AnoLetivo).filter(AnoLetivo.id == ano_id).first()
+    if not ano:
+        raise HTTPException(status_code=404, detail="Ano letivo nao encontrado")
+    ano.encerrado = True
+    ano.ativo = False
+    registrar_auditoria_sistema(db, usuario, "encerrou", "ano_letivo", ano.id, ano.nome, request)
+    db.commit()
+    return {"mensagem": "Ano letivo encerrado"}
 
 
 @router.get("/sistema/permissoes")

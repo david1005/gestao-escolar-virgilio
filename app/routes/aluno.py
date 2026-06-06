@@ -14,6 +14,7 @@ from app.models.registro import Registro
 from app.models.usuario import Usuario
 from app.schemas import aluno as schemas
 from app.schemas.aluno import AlunoCreate, AlunoUpdate, CursoCreate, TurmaCreate
+from app.services.ano_letivo import obter_ano_letivo_ativo
 
 router = APIRouter()
 
@@ -93,6 +94,12 @@ def calcular_previa_virada(db: Session):
         "terceiro_concluido": por_ano.get(3, 0),
         "sem_destino": sem_destino,
     }
+
+
+def preencher_ano_letivo_em_historico(db: Session, ano_letivo_id: int):
+    db.query(Aluno).filter(Aluno.ano_letivo_id == None).update({Aluno.ano_letivo_id: ano_letivo_id})
+    db.query(Registro).filter(Registro.ano_letivo_id == None).update({Registro.ano_letivo_id: ano_letivo_id})
+    db.query(Ocorrencia).filter(Ocorrencia.ano_letivo_id == None).update({Ocorrencia.ano_letivo_id: ano_letivo_id})
 
 
 @router.post("/cursos/", response_model=schemas.Curso)
@@ -215,7 +222,8 @@ def criar_aluno(aluno: AlunoCreate, db: Session = Depends(get_db), usuario: Usua
     exigir_alunos(db, usuario)
     if usuario.perfil not in ["admin", "ppdt"]:
         raise HTTPException(status_code=403, detail="Acesso negado")
-    db_aluno = Aluno(**aluno.model_dump())
+    ano_letivo = obter_ano_letivo_ativo(db)
+    db_aluno = Aluno(**aluno.model_dump(), ano_letivo_id=ano_letivo.id)
     db.add(db_aluno)
     db.flush()
     registrar_auditoria(db, usuario, "criou", "aluno", db_aluno.id, f"matricula={aluno.matricula}")
@@ -248,6 +256,9 @@ def previa_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depends(
     exigir_alunos(db, usuario)
     if usuario.perfil != "admin":
         raise HTTPException(status_code=403, detail="Acesso negado")
+    ano_letivo = obter_ano_letivo_ativo(db)
+    preencher_ano_letivo_em_historico(db, ano_letivo.id)
+    db.commit()
     return calcular_previa_virada(db)
 
 
@@ -256,6 +267,9 @@ def realizar_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depend
     exigir_alunos(db, usuario)
     if usuario.perfil != "admin":
         raise HTTPException(status_code=403, detail="Acesso negado")
+
+    ano_letivo = obter_ano_letivo_ativo(db)
+    preencher_ano_letivo_em_historico(db, ano_letivo.id)
 
     turmas = db.query(Turma).all()
     turmas_por_id = {turma.id: turma for turma in turmas}
@@ -278,9 +292,10 @@ def realizar_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depend
         destino_id = proxima_turma.get((turma_atual.ano + 1, turma_atual.letra, turma_atual.curso_id))
         if destino_id:
             aluno.turma_id = destino_id
+            aluno.ano_letivo_id = ano_letivo.id
             promovidos += 1
 
-    registrar_auditoria(db, usuario, "virada_ano", "aluno", None, f"promovidos={promovidos}; concluidos={concluidos}")
+    registrar_auditoria(db, usuario, "virada_ano", "aluno", None, f"ano_letivo={ano_letivo.nome}; promovidos={promovidos}; concluidos={concluidos}")
     db.commit()
     return {
         "mensagem": "Virada de ano letivo realizada com sucesso",
@@ -390,6 +405,7 @@ def importar_alunos_csv(
     ignorados = 0
     erros = []
     turma_importacao = None
+    ano_letivo_importacao = obter_ano_letivo_ativo(db)
 
     if curso_id and ano:
         turma_importacao = db.query(Turma).filter(Turma.curso_id == curso_id, Turma.ano == ano).first()
@@ -428,6 +444,7 @@ def importar_alunos_csv(
                 contato_responsavel=(linha.get("contato_responsavel") or "").strip(),
                 turma_id=turma_id,
                 status=(linha.get("status") or "ativo").strip() or "ativo",
+                ano_letivo_id=ano_letivo_importacao.id,
             )
             if not aluno.nome or not aluno.responsavel or not aluno.contato_responsavel:
                 raise ValueError("campos obrigatorios ausentes")

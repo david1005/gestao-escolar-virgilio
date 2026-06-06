@@ -65,14 +65,21 @@ function renderAnos(anos) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum ano letivo cadastrado.</td></tr>';
         return;
     }
-    tbody.innerHTML = anos.map(a => `
+    tbody.innerHTML = anos.map(a => {
+        const status = a.encerrado
+            ? '<span class="badge bg-dark">Encerrado</span>'
+            : (a.ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>');
+        const botaoAtivar = `<button class="btn btn-sm btn-outline-primary me-1" onclick="ativarAno(${a.id})" ${a.ativo || a.encerrado ? 'disabled' : ''}>Ativar</button>`;
+        const botaoEncerrar = `<button class="btn btn-sm btn-outline-danger" onclick="encerrarAno(${a.id})" ${a.encerrado ? 'disabled' : ''}>Encerrar</button>`;
+        return `
         <tr>
             <td>${a.nome}</td>
             <td>${a.data_inicio} ate ${a.data_fim}</td>
-            <td>${a.ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>'}</td>
-            <td><button class="btn btn-sm btn-outline-primary" onclick="ativarAno(${a.id})" ${a.ativo ? 'disabled' : ''}>Ativar</button></td>
+            <td>${status}</td>
+            <td>${botaoAtivar}${botaoEncerrar}</td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 async function criarAnoLetivo() {
@@ -95,6 +102,16 @@ async function criarAnoLetivo() {
 async function ativarAno(id) {
     await fetch(`/api/sistema/anos-letivos/${id}/ativar`, { method: 'PUT' });
     carregarTudo();
+}
+
+async function encerrarAno(id) {
+    if (!confirm('Encerrar este ano letivo? Ele deixara de ser o ano ativo.')) return;
+    const res = await fetch(`/api/sistema/anos-letivos/${id}/encerrar`, { method: 'PUT' });
+    if (res.ok) carregarTudo();
+    else {
+        const erro = await res.json().catch(() => ({}));
+        alert(erro.detail || 'Erro ao encerrar ano letivo.');
+    }
 }
 
 function renderPermissoes() {

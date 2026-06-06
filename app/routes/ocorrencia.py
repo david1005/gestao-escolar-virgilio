@@ -9,6 +9,7 @@ from app.schemas.ocorrencia import OcorrenciaCreate, OcorrenciaUpdate
 from app.schemas import ocorrencia as schemas
 from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
 from app.models.usuario import Usuario
+from app.services.ano_letivo import obter_ano_letivo_ativo
 
 router = APIRouter()
 
@@ -29,7 +30,8 @@ def registrar_auditoria(db: Session, usuario: Usuario, acao: str, entidade: str,
 @router.post("/ocorrencias/", response_model=schemas.Ocorrencia)
 def criar_ocorrencia(ocorrencia: OcorrenciaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_ocorrencias(db, usuario)
-    db_ocorrencia = Ocorrencia(**ocorrencia.model_dump())
+    ano_letivo = obter_ano_letivo_ativo(db)
+    db_ocorrencia = Ocorrencia(**ocorrencia.model_dump(), ano_letivo_id=ano_letivo.id)
     db.add(db_ocorrencia)
     db.flush()
     registrar_auditoria(db, usuario, "criou", "ocorrencia", db_ocorrencia.id, f"aluno_id={db_ocorrencia.aluno_id}; tipo={db_ocorrencia.tipo}")

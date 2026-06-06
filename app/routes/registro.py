@@ -8,6 +8,7 @@ from app.schemas.registro import RegistroCreate, RegistroUpdate
 from app.schemas import registro as schemas
 from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
 from app.models.usuario import Usuario
+from app.services.ano_letivo import obter_ano_letivo_ativo
 
 router = APIRouter()
 
@@ -28,7 +29,8 @@ def registrar_auditoria(db: Session, usuario: Usuario, acao: str, entidade: str,
 @router.post("/registros/", response_model=schemas.Registro)
 def criar_registro(registro: RegistroCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_registros(db, usuario)
-    db_registro = Registro(**registro.model_dump())
+    ano_letivo = obter_ano_letivo_ativo(db)
+    db_registro = Registro(**registro.model_dump(), ano_letivo_id=ano_letivo.id)
     db.add(db_registro)
     db.flush()
     registrar_auditoria(db, usuario, "criou", "registro", db_registro.id, f"aluno_id={db_registro.aluno_id}; tipo={db_registro.tipo}")

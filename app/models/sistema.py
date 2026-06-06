@@ -14,6 +14,7 @@ class AnoLetivo(Base):
     data_inicio = Column(Date, nullable=False)
     data_fim = Column(Date, nullable=False)
     ativo = Column(Boolean, default=False)
+    encerrado = Column(Boolean, default=False)
     criado_em = Column(DateTime, default=datetime.now, nullable=False)
 
 

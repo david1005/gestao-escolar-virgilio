@@ -27,3 +27,4 @@ class Aluno(Base):
     contato_responsavel = Column(String, nullable=False)
     turma_id = Column(Integer, nullable=False)
     status = Column(String, nullable=False, default="ativo")
+    ano_letivo_id = Column(Integer, nullable=True)

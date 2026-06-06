@@ -14,6 +14,7 @@ from app.routes import sistema as sistema_routes
 from app.auth import get_usuario_atual, tem_permissao, hash_senha
 from app.models.usuario import Usuario
 from app.database import SessionLocal
+from datetime import date
 import os
 
 Base.metadata.create_all(bind=engine)
@@ -77,6 +78,54 @@ def garantir_colunas_auditoria():
                 conn.execute(text(comando))
 
 garantir_colunas_auditoria()
+
+def garantir_colunas_ciclo_ano_letivo():
+    inspector = inspect(engine)
+    comandos = []
+
+    tabelas_com_ano = ["alunos", "registros", "ocorrencias"]
+    for tabela in tabelas_com_ano:
+        if not inspector.has_table(tabela):
+            continue
+        colunas = {coluna["name"] for coluna in inspector.get_columns(tabela)}
+        if "ano_letivo_id" not in colunas:
+            comandos.append(f"ALTER TABLE {tabela} ADD COLUMN ano_letivo_id INTEGER")
+
+    if inspector.has_table("anos_letivos"):
+        colunas_ano = {coluna["name"] for coluna in inspector.get_columns("anos_letivos")}
+        if "encerrado" not in colunas_ano:
+            comandos.append("ALTER TABLE anos_letivos ADD COLUMN encerrado BOOLEAN DEFAULT FALSE NOT NULL")
+
+    if comandos:
+        with engine.begin() as conn:
+            for comando in comandos:
+                conn.execute(text(comando))
+
+garantir_colunas_ciclo_ano_letivo()
+
+def garantir_ano_letivo_atual_e_vinculos():
+    db = SessionLocal()
+    try:
+        ano = db.query(sistema.AnoLetivo).filter(sistema.AnoLetivo.ativo == True).first()
+        if not ano:
+            hoje = date.today()
+            ano = sistema.AnoLetivo(
+                nome=f"Ano Letivo {hoje.year}",
+                ano=hoje.year,
+                data_inicio=date(hoje.year, 1, 1),
+                data_fim=date(hoje.year, 12, 31),
+                ativo=True,
+            )
+            db.add(ano)
+            db.flush()
+        db.query(aluno.Aluno).filter(aluno.Aluno.ano_letivo_id == None).update({aluno.Aluno.ano_letivo_id: ano.id})
+        db.query(registro.Registro).filter(registro.Registro.ano_letivo_id == None).update({registro.Registro.ano_letivo_id: ano.id})
+        db.query(ocorrencia.Ocorrencia).filter(ocorrencia.Ocorrencia.ano_letivo_id == None).update({ocorrencia.Ocorrencia.ano_letivo_id: ano.id})
+        db.commit()
+    finally:
+        db.close()
+
+garantir_ano_letivo_atual_e_vinculos()
 
 def garantir_admin_inicial():
     db = SessionLocal()
