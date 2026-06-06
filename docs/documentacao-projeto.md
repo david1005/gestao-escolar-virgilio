@@ -1,7 +1,7 @@
 # Documentacao do Projeto - Sistema de Gestao Escolar
 
-Versao: 0.1  
-Data: 05/06/2026  
+Versao: 0.2  
+Data: 06/06/2026  
 Projeto: Gestao Escolar Virgilio  
 Repositorio: david1005/gestao-escolar-virgilio
 
@@ -26,11 +26,11 @@ Desenvolver um sistema web para auxiliar a escola no controle de alunos, registr
 - Registrar ocorrencias escolares com historico por aluno.
 - Emitir autorizacoes e termos para impressao.
 - Controlar acesso por perfil de usuario.
-- Permitir importacao e exportacao de alunos.
+- Permitir importacao com pre-visualizacao e exportacao de alunos.
 - Permitir anexar documentos relacionados a alunos, registros e ocorrencias.
-- Gerar relatorios oficiais e indicadores gerenciais.
+- Gerar relatorios oficiais imprimiveis e indicadores gerenciais.
 - Registrar auditoria das principais acoes.
-- Permitir backup do banco de dados.
+- Permitir backup do banco de dados e dos anexos.
 - Facilitar a implantacao em ambiente local ou hospedado.
 
 ## 3. Escopo do sistema
@@ -40,12 +40,12 @@ Desenvolver um sistema web para auxiliar a escola no controle de alunos, registr
 - Autenticacao de usuarios.
 - Cadastro e manutencao de alunos.
 - Cadastro e manutencao de cursos e turmas.
-- Importacao de alunos por CSV.
+- Importacao de alunos por CSV com pre-visualizacao.
 - Exportacao de alunos em CSV.
 - Registro de atrasos.
 - Registro de saidas antecipadas.
 - Registro de ocorrencias.
-- Consulta individual do historico do aluno.
+- Consulta individual do historico do aluno com linha do tempo.
 - Impressao de autorizacao de entrada/saida.
 - Impressao de termo de ocorrencia.
 - Dashboard com indicadores.
@@ -54,6 +54,7 @@ Desenvolver um sistema web para auxiliar a escola no controle de alunos, registr
 - Ano letivo.
 - Backup manual.
 - Restauracao controlada de backup JSON.
+- Backup separado dos anexos em pacote ZIP.
 - Anexos.
 - Auditoria com filtros.
 - Manual do usuario dentro do sistema.
@@ -152,11 +153,19 @@ O sistema deve listar alunos com filtros por nome, turma, ano, curso e status.
 
 ### RF16 - Perfil individual do aluno
 
-O sistema deve possuir uma pagina individual do aluno com dados, historico de registros, ocorrencias e anexos.
+O sistema deve possuir uma pagina individual do aluno com dados, historico de registros, ocorrencias, anexos e historico de matriculas.
+
+### RF16.1 - Linha do tempo do aluno
+
+O sistema deve exibir uma linha do tempo no perfil do aluno, reunindo matriculas, mudancas de turma, atrasos, saidas, ocorrencias, notificacoes ao responsavel e anexos.
 
 ### RF17 - Importacao de alunos
 
 O sistema deve importar alunos por arquivo CSV, permitindo selecionar curso e ano para definir a turma de importacao.
+
+### RF17.1 - Pre-visualizacao da importacao
+
+Antes de concluir a importacao, o sistema deve exibir uma previa com linhas que serao criadas, ignoradas ou que possuem erro.
 
 ### RF18 - Validacao de datas na importacao
 
@@ -230,7 +239,7 @@ O sistema deve exibir indicadores de alunos, atrasos, saidas, ocorrencias, ranki
 
 ### RF35 - Relatorios oficiais
 
-O sistema deve gerar relatorios oficiais em formato imprimivel para alunos, ocorrencias e resumo por turma.
+O sistema deve gerar relatorios oficiais em formato imprimivel para alunos, ocorrencias e resumo por turma, com cabecalho institucional, logo, filtros usados, numeracao, assinaturas e rodape.
 
 ### RF36 - Configuracoes da escola
 
@@ -263,6 +272,10 @@ O administrador deve poder gerar e baixar backup manual do banco.
 ### RF39.1 - Restauracao de backup
 
 O administrador deve poder restaurar backups JSON gerados pelo sistema, mediante confirmacao explicita.
+
+### RF39.2 - Backup dos anexos
+
+O administrador deve poder gerar e baixar um pacote ZIP com os arquivos anexados e um manifesto com os metadados de cada anexo.
 
 ### RF40 - Auditoria
 
@@ -356,11 +369,15 @@ O sistema deve oferecer rotina manual de backup e permitir armazenamento externo
 | RN18 | Anexos devem estar vinculados a uma entidade e a um identificador. |
 | RN19 | Backups so podem ser gerados por administrador. |
 | RN19.1 | Restauracao automatica de backup exige confirmacao textual e aceita apenas backup JSON gerado pelo sistema. |
+| RN19.2 | Backup de anexos deve ser gerado separadamente do backup do banco e deve incluir manifesto de rastreabilidade. |
 | RN20 | Alteracoes sensiveis devem gerar log de auditoria. |
 | RN21 | Senhas devem ter pelo menos 8 caracteres, com letras e numeros. |
 | RN22 | Em producao, SECRET_KEY deve ser uma chave forte e configurada por variavel de ambiente. |
 | RN23 | Importacao de alunos deve aceitar data em DD/MM/AAAA e AAAA-MM-DD. |
 | RN24 | O curso e o ano escolhidos no modal de importacao definem a turma para todos os alunos importados. |
+| RN25 | Importacao de alunos deve passar por pre-visualizacao antes da gravacao definitiva. |
+| RN26 | Linha do tempo do aluno deve mostrar inicialmente quantidade limitada de eventos, com filtro e opcao de expansao. |
+| RN27 | Relatorios oficiais devem exibir filtros aplicados e dados de emissao para rastreabilidade. |
 
 ## 9. Casos de uso
 
@@ -398,9 +415,12 @@ Fluxo principal:
 1. Usuario baixa o modelo de importacao.
 2. Preenche os dados no arquivo CSV.
 3. Seleciona curso e ano no modal de importacao.
-4. Envia o arquivo.
-5. Sistema valida matricula, data e campos obrigatorios.
-6. Sistema cria os alunos validos e informa ignorados.
+4. Seleciona o arquivo.
+5. Clica em Pre-visualizar.
+6. Sistema valida matricula, data, campos obrigatorios e turma.
+7. Sistema mostra tabela com linhas a criar, ignorar e com erro.
+8. Usuario confirma a importacao.
+9. Sistema cria os alunos validos e informa ignorados.
 
 ### UC04 - Registrar atraso ou saida antecipada
 
@@ -454,6 +474,18 @@ Objetivo: recuperar dados academicos de um backup anterior.
 4. Digita a confirmacao solicitada.
 5. Sistema restaura cursos, turmas, alunos, registros, ocorrencias e historico de matriculas.
 
+### UC06.2 - Gerar backup dos anexos
+
+Ator principal: Administrador  
+Objetivo: preservar os arquivos enviados ao sistema.
+
+1. Usuario acessa Configuracoes.
+2. Abre a aba Backup.
+3. Clica em Backup dos anexos.
+4. Sistema gera um arquivo ZIP com os documentos anexados.
+5. Sistema inclui um manifesto JSON com entidade, identificador, nome original, usuario e data.
+6. Usuario baixa e guarda o pacote em local seguro.
+
 ## 10. Fluxos principais
 
 ### 10.1 Fluxo de importacao de alunos
@@ -462,15 +494,19 @@ Objetivo: recuperar dados academicos de um backup anterior.
 flowchart TD
     A["Usuario abre modal de importacao"] --> B["Seleciona curso e ano"]
     B --> C["Seleciona arquivo CSV"]
-    C --> D["Sistema le linhas do arquivo"]
-    D --> E["Valida matricula e campos obrigatorios"]
-    E --> F["Converte data de nascimento"]
+    C --> D["Clica em Pre-visualizar"]
+    D --> E["Sistema le linhas do arquivo"]
+    E --> F["Valida matricula, campos e data"]
     F --> G["Localiza turma pelo curso e ano"]
     G --> H{"Dados validos?"}
-    H -- "Sim" --> I["Cria aluno"]
-    H -- "Nao" --> J["Ignora linha e registra erro"]
-    I --> K["Retorna resumo da importacao"]
+    H -- "Sim" --> I["Marca linha como Criar"]
+    H -- "Nao" --> J["Marca linha como Ignorar ou Erro"]
+    I --> K["Exibe tabela de pre-visualizacao"]
     J --> K
+    K --> L{"Usuario confirma?"}
+    L -- "Sim" --> M["Grava alunos validos"]
+    L -- "Nao" --> N["Cancela importacao"]
+    M --> O["Retorna resumo da importacao"]
 ```
 
 ### 10.2 Fluxo da virada de ano
@@ -539,6 +575,12 @@ flowchart LR
 erDiagram
     CURSO ||--o{ TURMA : possui
     TURMA ||--o{ ALUNO : possui
+    ALUNO ||--o{ MATRICULA_HISTORICO : possui
+    TURMA ||--o{ MATRICULA_HISTORICO : registra
+    ANO_LETIVO ||--o{ MATRICULA_HISTORICO : organiza
+    ANO_LETIVO ||--o{ ALUNO : vincula
+    ANO_LETIVO ||--o{ REGISTRO : vincula
+    ANO_LETIVO ||--o{ OCORRENCIA : vincula
     ALUNO ||--o{ REGISTRO : possui
     ALUNO ||--o{ OCORRENCIA : possui
     USUARIO }o--|| TURMA : "diretor_turma"
@@ -570,6 +612,18 @@ erDiagram
         string contato_responsavel
         int turma_id
         string status
+        int ano_letivo_id
+    }
+
+    MATRICULA_HISTORICO {
+        int id PK
+        int aluno_id
+        int turma_id
+        int ano_letivo_id
+        string status
+        date data_inicio
+        date data_fim
+        datetime criado_em
     }
 
     REGISTRO {
@@ -581,6 +635,7 @@ erDiagram
         string motivo
         boolean tem_documento
         string observacoes
+        int ano_letivo_id
     }
 
     OCORRENCIA {
@@ -596,6 +651,17 @@ erDiagram
         string registrado_por
         boolean responsavel_notificado
         int numero_ocorrencia
+        int ano_letivo_id
+    }
+
+    ANO_LETIVO {
+        int id PK
+        string nome
+        int ano
+        date data_inicio
+        date data_fim
+        boolean ativo
+        boolean encerrado
     }
 
     USUARIO {
@@ -635,6 +701,20 @@ erDiagram
         string user_agent
         datetime criado_em
     }
+
+    CONFIGURACAO_SISTEMA {
+        int id PK
+        string chave
+        text valor
+        datetime atualizado_em
+    }
+
+    PERMISSAO_PERFIL {
+        int id PK
+        string perfil
+        text permissoes
+        datetime atualizado_em
+    }
 ```
 
 ### 12.2 Observacoes sobre chaves
@@ -643,13 +723,15 @@ erDiagram
 - Matricula do aluno e unica, mas nao e chave primaria.
 - Usuario usa `id` como chave primaria e e-mail unico.
 - Anexos usam referencia generica por `entidade` e `entidade_id`.
+- Historico de matricula preserva a trajetoria do aluno entre turmas e anos letivos.
+- Alunos, registros e ocorrencias possuem vinculo com o ano letivo ativo.
 - Curso e turma possuem validacao de duplicidade via regras de negocio.
 
 ## 13. Modulos do sistema
 
 ### 13.1 Modulo Alunos
 
-Responsavel pelo cadastro, consulta, edicao, exclusao logica por status, importacao, exportacao, historico individual e virada de ano.
+Responsavel pelo cadastro, consulta, edicao, exclusao logica por status, importacao com pre-visualizacao, exportacao, historico individual, linha do tempo e virada de ano.
 
 ### 13.2 Modulo Registros
 
@@ -669,7 +751,7 @@ Responsavel pelo cadastro e manutencao de usuarios, perfis, vinculo a turma ou c
 
 ### 13.6 Modulo Configuracoes
 
-Responsavel por dados da escola, ano letivo, cursos, turmas, permissoes, relatorios, backups, anexos e auditoria.
+Responsavel por dados da escola, ano letivo, cursos, turmas, listas operacionais, permissoes, relatorios, backups do banco, backup dos anexos, anexos e auditoria.
 
 ## 14. Principais rotas
 
@@ -678,7 +760,7 @@ Responsavel por dados da escola, ano letivo, cursos, turmas, permissoes, relator
 | Rota | Tela |
 |---|---|
 | `/login` | Login |
-| `/` | Inicio ou redirecionamento por perfil |
+| `/` | Tela inicial personalizada por perfil |
 | `/alunos` | Listagem e gestao de alunos |
 | `/aluno/{id}` | Perfil individual do aluno |
 | `/registros` | Atrasos e saidas antecipadas |
@@ -696,11 +778,11 @@ Responsavel por dados da escola, ano letivo, cursos, turmas, permissoes, relator
 | Usuarios | `/api/usuarios/`, `/api/usuarios/{id}`, `/api/usuarios/{id}/resetar-senha` |
 | Cursos | `/api/cursos/`, `/api/cursos/{id}` |
 | Turmas | `/api/turmas/`, `/api/turmas/{id}` |
-| Alunos | `/api/alunos/`, `/api/alunos/{id}`, `/api/alunos/importar-csv`, `/api/alunos/virada-ano` |
+| Alunos | `/api/alunos/`, `/api/alunos/{id}`, `/api/alunos/importar-csv`, `/api/alunos/importar-csv/preview`, `/api/alunos/virada-ano` |
 | Registros | `/api/registros/`, `/api/registros/{id}`, `/api/registros/aluno/{aluno_id}` |
 | Ocorrencias | `/api/ocorrencias/`, `/api/ocorrencias/{id}`, `/api/ocorrencias/aluno/{aluno_id}` |
 | Dashboard | `/api/dashboard/gerencial`, `/api/dashboard/resumo`, rankings e graficos |
-| Sistema | configuracoes, listas operacionais, anos letivos, permissoes, auditoria, backups, anexos e relatorios |
+| Sistema | `/api/sistema/configuracoes`, listas operacionais, anos letivos, permissoes, auditoria, `/api/sistema/backups`, `/api/sistema/backups/anexos`, anexos e relatorios |
 
 ## 15. Seguranca
 
@@ -735,7 +817,7 @@ O sistema registra acoes relevantes, usuario, entidade, detalhes, data, IP e use
 
 ## 16. Backup e recuperacao
 
-O sistema possui funcionalidade de backup manual e restauracao controlada, acessiveis apenas pelo administrador.
+O sistema possui funcionalidade de backup manual, backup separado dos anexos e restauracao controlada, acessiveis apenas pelo administrador.
 
 Fluxo:
 
@@ -746,10 +828,25 @@ Fluxo:
 5. Admin baixa e armazena o arquivo em local seguro.
 6. Quando necessario, admin pode restaurar um backup JSON gerado pelo sistema mediante confirmacao textual.
 
+Fluxo do backup dos anexos:
+
+1. Admin acessa Configuracoes.
+2. Abre a aba Backup.
+3. Clica em Backup dos anexos.
+4. Sistema gera arquivo `anexos_*.zip`.
+5. Admin baixa o pacote e armazena junto do backup do banco.
+
+O pacote de anexos contem:
+
+- Arquivos enviados ao sistema.
+- `manifesto_anexos.json` com dados de rastreabilidade.
+- Separacao por entidade e identificador, como aluno, registro ou ocorrencia.
+
 Recomendacao operacional:
 
 - Gerar backup antes de importacoes grandes.
 - Gerar backup antes da virada de ano.
+- Gerar backup dos anexos antes de migracao de hospedagem.
 - Guardar copias em mais de um local.
 - Em producao, avaliar backup automatico externo.
 
@@ -814,14 +911,18 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 - Admin/PPDT consegue cadastrar aluno em turma existente.
 - Sistema impede matricula duplicada.
 - Importacao aceita arquivo CSV do modelo.
+- Importacao exibe pre-visualizacao com linhas a criar, ignorar e com erro.
 - Importacao aceita datas em DD/MM/AAAA.
 - Coordenador visualiza apenas cursos vinculados.
 - Diretor de turma visualiza apenas sua turma.
 - Registro de atraso e saida pode ser criado e impresso.
 - Ocorrencia pode ser criada e termo pode ser impresso.
 - Anexos podem ser vinculados a aluno, registro ou ocorrencia.
+- Perfil do aluno exibe linha do tempo com filtros e carregamento incremental.
 - Dashboard carrega indicadores.
-- Backup pode ser gerado pelo admin.
+- Relatorio oficial exibe logo, filtros, numeracao, assinaturas e rodape.
+- Backup do banco pode ser gerado pelo admin.
+- Backup dos anexos pode ser gerado e baixado pelo admin.
 - Auditoria registra acoes principais.
 
 ## 20. Riscos e pontos de atencao
@@ -829,19 +930,19 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 | Risco | Impacto | Mitigacao |
 |---|---|---|
 | Falta de backup antes de grandes mudancas | Perda de dados | Gerar backup antes de importacao e virada |
-| Erro em planilha de importacao | Alunos ignorados | Validar modelo e revisar erros retornados |
+| Erro em planilha de importacao | Alunos ignorados | Usar pre-visualizacao, validar modelo e revisar erros retornados |
 | Permissoes mal configuradas | Usuario acessa mais ou menos do que deveria | Revisar perfis antes do uso oficial |
 | Uso de senha fraca | Risco de acesso indevido | Exigir senha forte e troca periodica |
-| Hospedagem sem backup automatico | Risco operacional | Manter backup manual e avaliar backup externo |
+| Hospedagem sem backup automatico | Risco operacional | Manter backup manual, backup dos anexos e avaliar backup externo |
 | Falta de treinamento | Uso incorreto | Criar manual de usuario e treinamento rapido |
 
 ## 21. Limitacoes atuais
 
 - Nao ha envio automatico de notificacoes por e-mail ou WhatsApp.
 - Nao ha assinatura digital integrada.
-- Os relatorios sao gerados como HTML imprimivel.
+- Os relatorios oficiais sao gerados como HTML imprimivel, nao como arquivo PDF binario nativo.
 - O sistema ainda nao possui rotina automatica de backup agendada.
-- O controle de anexos depende do armazenamento local da aplicacao/hospedagem.
+- O controle de anexos depende do armazenamento local da aplicacao/hospedagem, por isso deve ser acompanhado pelo backup ZIP dos anexos.
 - Nao ha integracao com sistemas oficiais externos.
 
 ## 22. Sugestoes de evolucao
@@ -849,7 +950,8 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 - Envio de notificacoes para responsaveis.
 - Historico de comunicacao com responsavel.
 - Backup automatico agendado.
-- Exportacao PDF mais refinada.
+- Exportacao direta para PDF binario.
+- Restauracao assistida do pacote ZIP de anexos.
 
 ## 23. Glossario
 
@@ -859,6 +961,8 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 | Registro | Lancamento de atraso ou saida antecipada |
 | Ocorrencia | Registro disciplinar ou pedagogico de acompanhamento |
 | Anexo | Arquivo vinculado a aluno, registro ou ocorrencia |
+| Manifesto de anexos | Arquivo JSON dentro do backup ZIP que descreve os documentos anexados |
+| Linha do tempo | Visao cronologica dos eventos do aluno |
 | Virada de ano | Processo de promocao de alunos para a serie seguinte |
 | Auditoria | Historico das acoes executadas por usuarios |
 | Turma destino | Turma para onde o aluno sera promovido na virada de ano |
@@ -868,3 +972,4 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 | Versao | Data | Descricao |
 |---|---|---|
 | 0.1 | 05/06/2026 | Criacao inicial da documentacao do projeto |
+| 0.2 | 06/06/2026 | Revisao geral com importacao previa, linha do tempo, relatorios refinados e backup dos anexos |

@@ -434,19 +434,25 @@ function renderBackups(lista) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum backup gerado.</td></tr>';
         return;
     }
-    tbody.innerHTML = lista.map(b => `
+    tbody.innerHTML = lista.map(b => {
+        const tipo = b.nome.startsWith('anexos_') ? 'Anexos' : (b.nome.endsWith('.sql') ? 'Banco SQL' : 'Banco JSON');
+        const botaoRestaurar = b.nome.startsWith('anexos_')
+            ? ''
+            : `<button class="btn btn-sm btn-outline-danger" onclick="restaurarBackup('${textoSeguro(b.nome)}')">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar
+                </button>`;
+        return `
         <tr>
-            <td>${b.nome}</td>
+            <td>${b.nome}<div class="small text-muted">${tipo}</div></td>
             <td>${formatarTamanho(b.tamanho)}</td>
             <td>${new Date(b.criado_em).toLocaleString('pt-BR')}</td>
             <td>
                 <a class="btn btn-sm btn-outline-success me-1" href="${b.url}"><i class="bi bi-download me-1"></i>Baixar</a>
-                <button class="btn btn-sm btn-outline-danger" onclick="restaurarBackup('${textoSeguro(b.nome)}')">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar
-                </button>
+                ${botaoRestaurar}
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 async function gerarBackup() {
@@ -459,6 +465,19 @@ async function gerarBackup() {
     } else {
         const erro = await res.json();
         alert(erro.detail || 'Erro ao gerar backup.');
+    }
+}
+
+async function gerarBackupAnexos() {
+    if (!confirm('Gerar um pacote .zip com todos os anexos enviados?')) return;
+    const res = await fetch('/api/sistema/backups/anexos', { method: 'POST' });
+    if (res.ok) {
+        const backup = await res.json();
+        alert(`Backup dos anexos gerado: ${backup.nome}\nArquivos incluidos: ${backup.total_arquivos}`);
+        carregarTudo();
+    } else {
+        const erro = await res.json().catch(() => ({}));
+        alert(erro.detail || 'Erro ao gerar backup dos anexos.');
     }
 }
 

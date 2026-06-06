@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import uuid
+import zipfile
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -188,6 +189,18 @@ def caminho_backup_seguro(nome: str):
     return caminho
 
 
+def caminho_anexo_seguro(anexo: Anexo):
+    caminho = Path(anexo.caminho)
+    if anexo.caminho.startswith("/static/uploads/"):
+        caminho = Path(anexo.caminho.lstrip("/"))
+    caminho = caminho.resolve()
+    pasta_upload = UPLOAD_DIR.resolve()
+    pasta_static_antiga = Path("static/uploads").resolve()
+    if caminho.exists() and (caminho.parent == pasta_upload or caminho.parent == pasta_static_antiga):
+        return caminho
+    return None
+
+
 def get_permissoes(db: Session):
     existentes = {p.perfil: json.loads(p.permissoes) for p in db.query(PermissaoPerfil).all()}
     for perfil, permissoes in PERMISSOES_PADRAO.items():
@@ -356,7 +369,8 @@ def listar_auditoria(
 def listar_backups(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_admin(usuario)
     arquivos = []
-    for caminho in sorted(BACKUP_DIR.glob("backup_*"), key=lambda p: p.stat().st_mtime, reverse=True):
+    caminhos = list(BACKUP_DIR.glob("backup_*")) + list(BACKUP_DIR.glob("anexos_*"))
+    for caminho in sorted(caminhos, key=lambda p: p.stat().st_mtime, reverse=True):
         arquivos.append({
             "nome": caminho.name,
             "tamanho": caminho.stat().st_size,
@@ -420,6 +434,57 @@ def gerar_backup(request: Request, db: Session = Depends(get_db), usuario: Usuar
         "tamanho": destino.stat().st_size,
         "url": f"/api/sistema/backups/{nome}",
         "tipo": "sql" if pg_dump else "json"
+    }
+
+
+@router.post("/sistema/backups/anexos")
+def gerar_backup_anexos(request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    exigir_admin(usuario)
+    agora = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nome = f"anexos_{agora}.zip"
+    destino = BACKUP_DIR / nome
+    anexos = db.query(Anexo).order_by(Anexo.criado_em).all()
+    manifesto = []
+
+    with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as pacote:
+        for anexo in anexos:
+            caminho = caminho_anexo_seguro(anexo)
+            existe = bool(caminho)
+            manifesto.append({
+                "id": anexo.id,
+                "entidade": anexo.entidade,
+                "entidade_id": anexo.entidade_id,
+                "nome_original": anexo.nome_original,
+                "nome_arquivo": anexo.nome_arquivo,
+                "content_type": anexo.content_type,
+                "tamanho": anexo.tamanho,
+                "enviado_por_nome": anexo.enviado_por_nome,
+                "criado_em": anexo.criado_em.isoformat() if anexo.criado_em else None,
+                "incluido_no_zip": existe,
+            })
+            if existe:
+                pasta = f"{anexo.entidade}_{anexo.entidade_id}"
+                pacote.write(caminho, f"{pasta}/{anexo.nome_arquivo}")
+
+        pacote.writestr(
+            "manifesto_anexos.json",
+            json.dumps({
+                "gerado_em": datetime.now().isoformat(),
+                "total_anexos": len(anexos),
+                "total_arquivos_incluidos": sum(1 for item in manifesto if item["incluido_no_zip"]),
+                "anexos": manifesto,
+            }, ensure_ascii=False, indent=2),
+        )
+
+    registrar_auditoria_sistema(db, usuario, "gerou", "backup_anexos", None, nome, request)
+    db.commit()
+    return {
+        "nome": nome,
+        "tamanho": destino.stat().st_size,
+        "url": f"/api/sistema/backups/{nome}",
+        "tipo": "anexos",
+        "total_anexos": len(anexos),
+        "total_arquivos": sum(1 for item in manifesto if item["incluido_no_zip"]),
     }
 
 
@@ -593,13 +658,8 @@ def baixar_anexo(anexo_id: int, request: Request, db: Session = Depends(get_db),
     if not anexo:
         raise HTTPException(status_code=404, detail="Anexo nao encontrado")
     exigir_anexo(db, usuario, anexo.entidade)
-    caminho = Path(anexo.caminho)
-    if anexo.caminho.startswith("/static/uploads/"):
-        caminho = Path(anexo.caminho.lstrip("/"))
-    caminho = caminho.resolve()
-    pasta_upload = UPLOAD_DIR.resolve()
-    pasta_static_antiga = Path("static/uploads").resolve()
-    if not caminho.exists() or (caminho.parent != pasta_upload and caminho.parent != pasta_static_antiga):
+    caminho = caminho_anexo_seguro(anexo)
+    if not caminho:
         raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
     registrar_auditoria_sistema(db, usuario, "baixou", "anexo", anexo.id, anexo.nome_original, request)
     db.commit()
@@ -612,13 +672,8 @@ def excluir_anexo(anexo_id: int, request: Request, db: Session = Depends(get_db)
     if not anexo:
         raise HTTPException(status_code=404, detail="Anexo nao encontrado")
     exigir_anexo(db, usuario, anexo.entidade)
-    caminho = Path(anexo.caminho)
-    if anexo.caminho.startswith("/static/uploads/"):
-        caminho = Path(anexo.caminho.lstrip("/"))
-    caminho = caminho.resolve()
-    pasta_upload = UPLOAD_DIR.resolve()
-    pasta_static_antiga = Path("static/uploads").resolve()
-    if caminho.exists() and (caminho.parent == pasta_upload or caminho.parent == pasta_static_antiga):
+    caminho = caminho_anexo_seguro(anexo)
+    if caminho:
         caminho.unlink()
     registrar_auditoria_sistema(db, usuario, "excluiu", "anexo", anexo.id, anexo.nome_original, request)
     db.delete(anexo)
