@@ -11,6 +11,7 @@ from app.models.aluno import Aluno, Curso, Turma
 from app.models.auditoria import Auditoria
 from app.models.ocorrencia import Ocorrencia
 from app.models.registro import Registro
+from app.models.sistema import MatriculaHistorico
 from app.models.usuario import Usuario
 from app.schemas import aluno as schemas
 from app.schemas.aluno import AlunoCreate, AlunoUpdate, CursoCreate, TurmaCreate
@@ -100,6 +101,34 @@ def preencher_ano_letivo_em_historico(db: Session, ano_letivo_id: int):
     db.query(Aluno).filter(Aluno.ano_letivo_id == None).update({Aluno.ano_letivo_id: ano_letivo_id})
     db.query(Registro).filter(Registro.ano_letivo_id == None).update({Registro.ano_letivo_id: ano_letivo_id})
     db.query(Ocorrencia).filter(Ocorrencia.ano_letivo_id == None).update({Ocorrencia.ano_letivo_id: ano_letivo_id})
+
+
+def registrar_matricula_historico(db: Session, aluno: Aluno, ano_letivo_id: int, status: str = "ativo"):
+    existente = db.query(MatriculaHistorico).filter(
+        MatriculaHistorico.aluno_id == aluno.id,
+        MatriculaHistorico.turma_id == aluno.turma_id,
+        MatriculaHistorico.ano_letivo_id == ano_letivo_id,
+        MatriculaHistorico.data_fim == None,
+    ).first()
+    if existente:
+        existente.status = status
+        return existente
+    historico_aberto = db.query(MatriculaHistorico).filter(
+        MatriculaHistorico.aluno_id == aluno.id,
+        MatriculaHistorico.data_fim == None,
+    ).first()
+    if historico_aberto:
+        historico_aberto.data_fim = date.today()
+        historico_aberto.status = status if status != "ativo" else "encerrada"
+    novo = MatriculaHistorico(
+        aluno_id=aluno.id,
+        turma_id=aluno.turma_id,
+        ano_letivo_id=ano_letivo_id,
+        status=status,
+        data_inicio=date.today(),
+    )
+    db.add(novo)
+    return novo
 
 
 @router.post("/cursos/", response_model=schemas.Curso)
@@ -226,6 +255,7 @@ def criar_aluno(aluno: AlunoCreate, db: Session = Depends(get_db), usuario: Usua
     db_aluno = Aluno(**aluno.model_dump(), ano_letivo_id=ano_letivo.id)
     db.add(db_aluno)
     db.flush()
+    registrar_matricula_historico(db, db_aluno, ano_letivo.id, db_aluno.status)
     registrar_auditoria(db, usuario, "criou", "aluno", db_aluno.id, f"matricula={aluno.matricula}")
     db.commit()
     db.refresh(db_aluno)
@@ -286,6 +316,7 @@ def realizar_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depend
 
         if turma_atual.ano == 3:
             aluno.status = "concluido"
+            registrar_matricula_historico(db, aluno, ano_letivo.id, "concluido")
             concluidos += 1
             continue
 
@@ -293,6 +324,7 @@ def realizar_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depend
         if destino_id:
             aluno.turma_id = destino_id
             aluno.ano_letivo_id = ano_letivo.id
+            registrar_matricula_historico(db, aluno, ano_letivo.id, aluno.status)
             promovidos += 1
 
     registrar_auditoria(db, usuario, "virada_ano", "aluno", None, f"ano_letivo={ano_letivo.nome}; promovidos={promovidos}; concluidos={concluidos}")
@@ -337,8 +369,14 @@ def editar_aluno(aluno_id: int, dados: AlunoUpdate, db: Session = Depends(get_db
     if matricula_existente:
         raise HTTPException(status_code=400, detail="Matricula ja cadastrada")
 
+    turma_anterior = aluno.turma_id
+    status_anterior = aluno.status
     for campo, valor in dados.model_dump().items():
         setattr(aluno, campo, valor)
+    ano_letivo = obter_ano_letivo_ativo(db)
+    if aluno.turma_id != turma_anterior or aluno.status != status_anterior:
+        aluno.ano_letivo_id = ano_letivo.id
+        registrar_matricula_historico(db, aluno, ano_letivo.id, aluno.status)
 
     registrar_auditoria(db, usuario, "editou", "aluno", aluno.id, f"matricula={aluno.matricula}")
     db.commit()
@@ -449,6 +487,8 @@ def importar_alunos_csv(
             if not aluno.nome or not aluno.responsavel or not aluno.contato_responsavel:
                 raise ValueError("campos obrigatorios ausentes")
             db.add(aluno)
+            db.flush()
+            registrar_matricula_historico(db, aluno, ano_letivo_importacao.id, aluno.status)
             criados += 1
         except Exception as erro:
             ignorados += 1

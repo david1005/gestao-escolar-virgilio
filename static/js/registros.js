@@ -28,6 +28,22 @@ const motivosPorTipo = {
     ]
 };
 
+async function carregarListasOperacionais() {
+    try {
+        const res = await fetch('/api/sistema/listas-operacionais');
+        if (!res.ok) return;
+        const listas = await res.json();
+        if (Array.isArray(listas.motivos_atraso) && listas.motivos_atraso.length) {
+            motivosPorTipo['Atraso'] = listas.motivos_atraso;
+        }
+        if (Array.isArray(listas.motivos_saida) && listas.motivos_saida.length) {
+            motivosPorTipo['Sa\u00edda antecipada'] = listas.motivos_saida;
+        }
+    } catch (erro) {
+        console.warn('Listas operacionais nao carregadas.', erro);
+    }
+}
+
 function atualizarListaMotivos() {
     const tipo = document.getElementById('tipo').value;
     const select = document.getElementById('motivoSelect');
@@ -54,6 +70,7 @@ function atualizarMotivo() {
 }
 
 async function carregarDados() {
+    await carregarListasOperacionais();
     const [resAlunos, resTurmas, resCursos, resRegistros] = await Promise.all([
         fetch('/api/alunos/'),
         fetch('/api/turmas/'),

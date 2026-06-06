@@ -36,6 +36,7 @@
                     {% if permissoes.configuracoes %}
                     <li class="nav-item"><a class="nav-link active" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configuracoes</a></li>
                     {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="/manual"><i class="bi bi-question-circle me-1"></i>Manual</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
@@ -60,6 +61,7 @@
             {% if perfil in ['admin', 'ppdt'] %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCursosTurmas">Cursos e turmas</button></li>
             {% endif %}
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabListas">Listas</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPermissoes">Permissoes</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRelatorios">Relatorios PDF</button></li>
             {% if perfil == 'admin' %}
@@ -178,6 +180,39 @@
             </div>
             {% endif %}
 
+            <div class="tab-pane fade" id="tabListas">
+                <div class="card shadow-sm">
+                    <div class="card-header fw-semibold">Motivos, medidas e tipos</div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Escreva um item por linha. Essas listas aparecem automaticamente nas telas de registros e ocorrencias.
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold">Motivos de atraso</label>
+                                <textarea class="form-control" id="listaMotivosAtraso" rows="8"></textarea>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold">Motivos de saida antecipada</label>
+                                <textarea class="form-control" id="listaMotivosSaida" rows="8"></textarea>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold">Tipos de ocorrencia</label>
+                                <textarea class="form-control" id="listaTiposOcorrencia" rows="7"></textarea>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-semibold">Medidas de ocorrencia</label>
+                                <textarea class="form-control" id="listaMedidasOcorrencia" rows="7"></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="salvarListasOperacionais()">
+                            <i class="bi bi-check-lg me-1"></i>Salvar listas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="tab-pane fade" id="tabPermissoes">
                 <div class="card shadow-sm"><div class="card-body">
                     <div class="row g-3">
@@ -214,6 +249,10 @@
                 <div class="card shadow-sm"><div class="card-header fw-semibold">Backups gerados</div><div class="card-body p-0">
                     <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Arquivo</th><th>Tamanho</th><th>Data</th><th>Acoes</th></tr></thead><tbody id="listaBackups"></tbody></table>
                 </div></div>
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    A restauracao substitui dados academicos como cursos, turmas, alunos, registros e ocorrencias. Usuarios e senhas sao mantidos.
+                </div>
             </div>
             {% endif %}
 
@@ -228,6 +267,18 @@
             </div>
 
             <div class="tab-pane fade" id="tabAuditoria">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3"><label class="form-label fw-semibold">Usuario</label><input class="form-control" id="auditoriaUsuario"></div>
+                            <div class="col-md-2"><label class="form-label fw-semibold">Acao</label><input class="form-control" id="auditoriaAcao"></div>
+                            <div class="col-md-2"><label class="form-label fw-semibold">Entidade</label><input class="form-control" id="auditoriaEntidade"></div>
+                            <div class="col-md-2"><label class="form-label fw-semibold">Inicio</label><input type="date" class="form-control" id="auditoriaInicio"></div>
+                            <div class="col-md-2"><label class="form-label fw-semibold">Fim</label><input type="date" class="form-control" id="auditoriaFim"></div>
+                            <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100" onclick="carregarAuditoria()"><i class="bi bi-search"></i></button></div>
+                        </div>
+                    </div>
+                </div>
                 <div class="card shadow-sm"><div class="card-body p-0">
                     <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Data</th><th>Usuario</th><th>Acao</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="listaAuditoria"></tbody></table>
                 </div></div>
@@ -237,7 +288,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>window.perfilAtual = "{{ perfil }}";</script>
-    <script src="/static/js/configuracoes.js?v=6"></script>
+    <script src="/static/js/configuracoes.js?v=7"></script>
     <script>
         async function logout() {
             await fetch('/api/auth/logout', { method: 'POST' });

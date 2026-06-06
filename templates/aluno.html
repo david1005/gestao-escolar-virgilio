@@ -34,6 +34,7 @@
                     {% if permissoes.configuracoes %}
                     <li class="nav-item"><a class="nav-link" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configurações</a></li>
                     {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="/manual"><i class="bi bi-question-circle me-1"></i>Manual</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
@@ -152,6 +153,24 @@
             </div>
         </div>
 
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-calendar-range me-2 text-primary"></i>Histórico de Matrícula
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Ano letivo</th><th>Turma</th><th>Status</th><th>Período</th></tr>
+                        </thead>
+                        <tbody id="tabelaMatriculas">
+                            <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Histórico -->
         <div class="row g-4">
             <div class="col-md-6">
@@ -209,6 +228,6 @@
         const alunoId = {{ aluno_id }};
     </script>
     <script src="/static/js/anexos.js?v=1"></script>
-    <script src="/static/js/aluno.js?v=3"></script>
+    <script src="/static/js/aluno.js?v=4"></script>
 </body>
 </html>

@@ -3,6 +3,8 @@ let turmas = [];
 let cursos = [];
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
+let tiposOcorrencia = [];
+let medidasOcorrencia = [];
 
 const medidasPadrao = {
     registro: 'S\u00f3 registro',
@@ -10,7 +12,39 @@ const medidasPadrao = {
     suspensao: 'Suspens\u00e3o + Notifica\u00e7\u00e3o ao respons\u00e1vel'
 };
 
+async function carregarListasOperacionais() {
+    try {
+        const res = await fetch('/api/sistema/listas-operacionais');
+        if (!res.ok) return;
+        const listas = await res.json();
+        tiposOcorrencia = Array.isArray(listas.tipos_ocorrencia) ? listas.tipos_ocorrencia : [];
+        medidasOcorrencia = Array.isArray(listas.medidas_ocorrencia) ? listas.medidas_ocorrencia : [];
+        if (medidasOcorrencia[0]) medidasPadrao.registro = medidasOcorrencia[0];
+        if (medidasOcorrencia[1]) medidasPadrao.advertencia = medidasOcorrencia[1];
+        if (medidasOcorrencia[2]) medidasPadrao.suspensao = medidasOcorrencia[2];
+        preencherSelectsOperacionais();
+    } catch (erro) {
+        console.warn('Listas operacionais nao carregadas.', erro);
+    }
+}
+
+function preencherOptions(id, lista, manterValor = true) {
+    const select = document.getElementById(id);
+    if (!select || !lista.length) return;
+    const valorAtual = select.value;
+    select.innerHTML = lista.map(item => `<option value="${item}">${item}</option>`).join('');
+    if (manterValor && lista.includes(valorAtual)) select.value = valorAtual;
+}
+
+function preencherSelectsOperacionais() {
+    preencherOptions('tipo', tiposOcorrencia);
+    preencherOptions('editTipo', tiposOcorrencia);
+    preencherOptions('medida', medidasOcorrencia);
+    preencherOptions('editMedida', medidasOcorrencia);
+}
+
 async function carregarDados() {
+    await carregarListasOperacionais();
     const [resAlunos, resTurmas, resCursos, resOcorrencias] = await Promise.all([
         fetch('/api/alunos/'),
         fetch('/api/turmas/'),

@@ -50,3 +50,16 @@ class Anexo(Base):
     enviado_por_id = Column(Integer, nullable=True)
     enviado_por_nome = Column(String, nullable=True)
     criado_em = Column(DateTime, default=datetime.now, nullable=False)
+
+
+class MatriculaHistorico(Base):
+    __tablename__ = "matriculas_historico"
+
+    id = Column(Integer, primary_key=True, index=True)
+    aluno_id = Column(Integer, nullable=False)
+    turma_id = Column(Integer, nullable=False)
+    ano_letivo_id = Column(Integer, nullable=False)
+    status = Column(String, default="ativo", nullable=False)
+    data_inicio = Column(Date, nullable=False)
+    data_fim = Column(Date, nullable=True)
+    criado_em = Column(DateTime, default=datetime.now, nullable=False)

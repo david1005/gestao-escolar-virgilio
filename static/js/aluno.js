@@ -60,6 +60,22 @@ async function carregarAluno() {
         }).join('');
     }
 
+    const tbodyMatriculas = document.getElementById('tabelaMatriculas');
+    if (tbodyMatriculas) {
+        if (!matriculas.length) {
+            tbodyMatriculas.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum historico de matricula.</td></tr>';
+        } else {
+            tbodyMatriculas.innerHTML = matriculas.map(m => `
+                <tr>
+                    <td>${m.ano_letivo}</td>
+                    <td>${m.turma}</td>
+                    <td><span class="badge bg-secondary">${m.status}</span></td>
+                    <td>${m.data_inicio}${m.data_fim ? ` ate ${m.data_fim}` : ' ate atualmente'}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
     carregarAnexosAluno();
 }
 
@@ -101,7 +117,7 @@ async function excluirAnexoAluno(id) {
 
 function gerarRelatorio() {
     if (!dadosAluno) return;
-    const { aluno, resumo, ocorrencias, registros } = dadosAluno;
+    const { aluno, resumo, ocorrencias, registros, matriculas = [] } = dadosAluno;
     const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const linhasRegistros = registros.map(r =>

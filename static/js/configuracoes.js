@@ -1,14 +1,16 @@
 let cursos = [];
 let turmas = [];
 let permissoes = {};
+let listasOperacionais = {};
 const perfilAtual = window.perfilAtual || '';
 const modulos = ['alunos', 'registros', 'ocorrencias', 'dashboard', 'relatorios', 'usuarios', 'configuracoes', 'anexos'];
 
 async function carregarTudo() {
-    const [cfg, anos, perms, auditoria, backups, anexos, resCursos, resTurmas] = await Promise.all([
+    const [cfg, anos, perms, listas, auditoria, backups, anexos, resCursos, resTurmas] = await Promise.all([
         fetch('/api/sistema/configuracoes').then(r => r.json()),
         fetch('/api/sistema/anos-letivos').then(r => r.json()),
         fetch('/api/sistema/permissoes').then(r => r.json()),
+        fetch('/api/sistema/listas-operacionais').then(r => r.json()),
         fetch('/api/sistema/auditoria').then(r => r.json()),
         perfilAtual === 'admin' ? fetch('/api/sistema/backups').then(r => r.json()) : Promise.resolve([]),
         fetch('/api/sistema/anexos').then(r => r.json()),
@@ -18,7 +20,9 @@ async function carregarTudo() {
     cursos = resCursos;
     turmas = resTurmas;
     permissoes = perms;
+    listasOperacionais = listas;
     renderConfig(cfg);
+    renderListasOperacionais();
     renderAnos(anos);
     renderPermissoes();
     renderAuditoria(auditoria);
@@ -57,6 +61,47 @@ async function salvarConfiguracoes() {
         body: JSON.stringify({ configuracoes })
     });
     alert(res.ok ? 'Configuracoes salvas.' : 'Erro ao salvar configuracoes.');
+}
+
+function linhasTextarea(id) {
+    return document.getElementById(id).value
+        .split('\n')
+        .map(linha => linha.trim())
+        .filter(Boolean);
+}
+
+function renderListasOperacionais() {
+    const campos = {
+        listaMotivosAtraso: listasOperacionais.motivos_atraso || [],
+        listaMotivosSaida: listasOperacionais.motivos_saida || [],
+        listaTiposOcorrencia: listasOperacionais.tipos_ocorrencia || [],
+        listaMedidasOcorrencia: listasOperacionais.medidas_ocorrencia || []
+    };
+    Object.entries(campos).forEach(([id, lista]) => {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = lista.join('\n');
+    });
+}
+
+async function salvarListasOperacionais() {
+    const dados = {
+        motivos_atraso: linhasTextarea('listaMotivosAtraso'),
+        motivos_saida: linhasTextarea('listaMotivosSaida'),
+        tipos_ocorrencia: linhasTextarea('listaTiposOcorrencia'),
+        medidas_ocorrencia: linhasTextarea('listaMedidasOcorrencia')
+    };
+    const res = await fetch('/api/sistema/listas-operacionais', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+    });
+    if (res.ok) {
+        listasOperacionais = dados;
+        alert('Listas salvas.');
+    } else {
+        const erro = await res.json().catch(() => ({}));
+        alert(erro.detail || 'Erro ao salvar listas.');
+    }
 }
 
 function renderAnos(anos) {
@@ -162,6 +207,23 @@ function renderAuditoria(lista) {
             <td>${l.detalhes || '-'}</td>
         </tr>
     `).join('');
+}
+
+async function carregarAuditoria() {
+    const params = new URLSearchParams();
+    const campos = {
+        usuario_nome: 'auditoriaUsuario',
+        acao: 'auditoriaAcao',
+        entidade: 'auditoriaEntidade',
+        data_inicio: 'auditoriaInicio',
+        data_fim: 'auditoriaFim'
+    };
+    Object.entries(campos).forEach(([chave, id]) => {
+        const valor = document.getElementById(id)?.value;
+        if (valor) params.set(chave, valor);
+    });
+    const res = await fetch(`/api/sistema/auditoria?${params.toString()}`);
+    renderAuditoria(await res.json());
 }
 
 function renderTurmasRelatorio() {
@@ -377,7 +439,12 @@ function renderBackups(lista) {
             <td>${b.nome}</td>
             <td>${formatarTamanho(b.tamanho)}</td>
             <td>${new Date(b.criado_em).toLocaleString('pt-BR')}</td>
-            <td><a class="btn btn-sm btn-outline-success" href="${b.url}"><i class="bi bi-download me-1"></i>Baixar</a></td>
+            <td>
+                <a class="btn btn-sm btn-outline-success me-1" href="${b.url}"><i class="bi bi-download me-1"></i>Baixar</a>
+                <button class="btn btn-sm btn-outline-danger" onclick="restaurarBackup('${textoSeguro(b.nome)}')">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar
+                </button>
+            </td>
         </tr>
     `).join('');
 }
@@ -392,6 +459,23 @@ async function gerarBackup() {
     } else {
         const erro = await res.json();
         alert(erro.detail || 'Erro ao gerar backup.');
+    }
+}
+
+async function restaurarBackup(nome) {
+    const confirmacao = prompt(`Restaurar o backup ${nome}?\n\nDigite RESTAURAR para confirmar.`);
+    if (confirmacao !== 'RESTAURAR') return;
+    const res = await fetch(`/api/sistema/backups/${encodeURIComponent(nome)}/restaurar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmacao })
+    });
+    if (res.ok) {
+        alert('Backup restaurado com sucesso.');
+        carregarTudo();
+    } else {
+        const erro = await res.json().catch(() => ({}));
+        alert(erro.detail || 'Erro ao restaurar backup.');
     }
 }
 

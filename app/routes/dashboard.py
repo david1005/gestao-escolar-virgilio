@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models.aluno import Aluno, Turma, Curso
 from app.models.registro import Registro
 from app.models.ocorrencia import Ocorrencia
-from app.models.sistema import AnoLetivo
+from app.models.sistema import AnoLetivo, MatriculaHistorico
 from app.models.usuario import Usuario
 from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
 
@@ -356,6 +356,12 @@ def dashboard_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuar
 
     ocorrencias = db.query(Ocorrencia).filter(Ocorrencia.aluno_id == aluno_id).order_by(Ocorrencia.data).all()
     registros = db.query(Registro).filter(Registro.aluno_id == aluno_id).order_by(Registro.data).all()
+    matriculas = db.query(MatriculaHistorico).filter(
+        MatriculaHistorico.aluno_id == aluno_id
+    ).order_by(MatriculaHistorico.data_inicio.desc()).all()
+    turmas = {t.id: t for t in db.query(Turma).all()}
+    cursos = {c.id: c for c in db.query(Curso).all()}
+    anos = {a.id: a for a in db.query(AnoLetivo).all()}
 
     total_ocorrencias = len(ocorrencias)
     total_atrasos = sum(1 for r in registros if r.tipo == "Atraso")
@@ -384,5 +390,15 @@ def dashboard_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuar
             "proxima_medida": proxima_medida
         },
         "ocorrencias": [{"data": str(o.data), "tipo": o.tipo, "descricao": o.descricao, "medida": o.medida} for o in ocorrencias],
-        "registros": [{"data": str(r.data), "tipo": r.tipo, "aula": r.aula, "motivo": r.motivo} for r in registros]
+        "registros": [{"data": str(r.data), "tipo": r.tipo, "aula": r.aula, "motivo": r.motivo} for r in registros],
+        "matriculas": [
+            {
+                "ano_letivo": anos.get(m.ano_letivo_id).nome if anos.get(m.ano_letivo_id) else "-",
+                "turma": nome_turma(turmas.get(m.turma_id), cursos.get(turmas.get(m.turma_id).curso_id) if turmas.get(m.turma_id) else None),
+                "status": m.status,
+                "data_inicio": str(m.data_inicio),
+                "data_fim": str(m.data_fim) if m.data_fim else None,
+            }
+            for m in matriculas
+        ]
     }

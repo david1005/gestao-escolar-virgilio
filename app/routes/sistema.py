@@ -18,7 +18,7 @@ from app.models.aluno import Aluno, Curso, Turma
 from app.models.auditoria import Auditoria
 from app.models.ocorrencia import Ocorrencia
 from app.models.registro import Registro
-from app.models.sistema import Anexo, AnoLetivo, ConfiguracaoSistema, PermissaoPerfil
+from app.models.sistema import Anexo, AnoLetivo, ConfiguracaoSistema, MatriculaHistorico, PermissaoPerfil
 from app.models.usuario import Usuario
 from app.services.ano_letivo import obter_ano_letivo_ativo
 
@@ -44,6 +44,10 @@ CONFIG_PADRAO = {
     "escola_endereco": "R. Pergentino Silva, S/N - Seminario, Crato-CE",
     "escola_telefone": "",
     "responsavel_sistema": "Secretaria / Coordenacao",
+    "motivos_atraso": "Transporte\nConsulta medica\nExame medico\nAtestado medico\nProblema odontologico\nCompromisso familiar\nQuestao judicial\nAtividade externa da escola",
+    "motivos_saida": "Consulta medica\nExame medico\nMal-estar\nResponsavel solicitou\nProblema odontologico\nCompromisso familiar\nDoenca na familia\nQuestao judicial\nAtividade externa da escola",
+    "tipos_ocorrencia": "Indisciplina\nConflito entre alunos\nUso indevido de celular\nAgressao verbal\nAgressao fisica\nDano ao patrimonio\nFalta de material\nOutro",
+    "medidas_ocorrencia": "So registro\nAdvertencia + Notificacao ao responsavel\nSuspensao + Notificacao ao responsavel\nEncaminhamento para coordenacao\nReuniao com responsavel",
 }
 
 
@@ -62,6 +66,17 @@ class ConfiguracaoUpdate(BaseModel):
 class PermissaoUpdate(BaseModel):
     perfil: str
     permissoes: list[str]
+
+
+class ListasOperacionaisUpdate(BaseModel):
+    motivos_atraso: list[str]
+    motivos_saida: list[str]
+    tipos_ocorrencia: list[str]
+    medidas_ocorrencia: list[str]
+
+
+class RestaurarBackupRequest(BaseModel):
+    confirmacao: str
 
 
 def localizar_pg_dump():
@@ -131,6 +146,48 @@ def get_configuracoes(db: Session):
     return existentes
 
 
+def texto_para_lista(valor: str | None):
+    return [linha.strip() for linha in (valor or "").splitlines() if linha.strip()]
+
+
+def lista_para_texto(lista: list[str]):
+    return "\n".join(item.strip() for item in lista if item.strip())
+
+
+def listas_operacionais(db: Session):
+    cfg = get_configuracoes(db)
+    return {
+        "motivos_atraso": texto_para_lista(cfg.get("motivos_atraso")),
+        "motivos_saida": texto_para_lista(cfg.get("motivos_saida")),
+        "tipos_ocorrencia": texto_para_lista(cfg.get("tipos_ocorrencia")),
+        "medidas_ocorrencia": texto_para_lista(cfg.get("medidas_ocorrencia")),
+    }
+
+
+def parse_data(valor):
+    if not valor:
+        return None
+    if isinstance(valor, date):
+        return valor
+    return date.fromisoformat(str(valor).split("T", 1)[0])
+
+
+def parse_datetime(valor):
+    if not valor:
+        return None
+    if isinstance(valor, datetime):
+        return valor
+    return datetime.fromisoformat(str(valor).replace("Z", "+00:00")).replace(tzinfo=None)
+
+
+def caminho_backup_seguro(nome: str):
+    caminho = (BACKUP_DIR / nome).resolve()
+    pasta_backup = BACKUP_DIR.resolve()
+    if not caminho.exists() or caminho.parent != pasta_backup:
+        raise HTTPException(status_code=404, detail="Backup nao encontrado")
+    return caminho
+
+
 def get_permissoes(db: Session):
     existentes = {p.perfil: json.loads(p.permissoes) for p in db.query(PermissaoPerfil).all()}
     for perfil, permissoes in PERMISSOES_PADRAO.items():
@@ -168,6 +225,35 @@ def salvar_configuracoes(dados: ConfiguracaoUpdate, request: Request, db: Sessio
     registrar_auditoria_sistema(db, usuario, "salvou", "configuracoes", None, "configuracoes gerais", request)
     db.commit()
     return {"mensagem": "Configuracoes salvas"}
+
+
+@router.get("/sistema/listas-operacionais")
+def obter_listas_operacionais(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    if not any(tem_permissao(db, usuario, modulo) for modulo in ["configuracoes", "registros", "ocorrencias"]):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    return listas_operacionais(db)
+
+
+@router.put("/sistema/listas-operacionais")
+def salvar_listas_operacionais(dados: ListasOperacionaisUpdate, request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    exigir_configuracoes(db, usuario)
+    valores = {
+        "motivos_atraso": lista_para_texto(dados.motivos_atraso),
+        "motivos_saida": lista_para_texto(dados.motivos_saida),
+        "tipos_ocorrencia": lista_para_texto(dados.tipos_ocorrencia),
+        "medidas_ocorrencia": lista_para_texto(dados.medidas_ocorrencia),
+    }
+    for chave, valor in valores.items():
+        item = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == chave).first()
+        if not item:
+            item = ConfiguracaoSistema(chave=chave, valor=valor)
+            db.add(item)
+        else:
+            item.valor = valor
+            item.atualizado_em = datetime.now()
+    registrar_auditoria_sistema(db, usuario, "salvou", "listas_operacionais", None, "motivos, medidas e tipos", request)
+    db.commit()
+    return {"mensagem": "Listas salvas"}
 
 
 @router.get("/sistema/anos-letivos")
@@ -242,9 +328,28 @@ def salvar_permissoes(dados: PermissaoUpdate, request: Request, db: Session = De
 
 
 @router.get("/sistema/auditoria")
-def listar_auditoria(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+def listar_auditoria(
+    usuario_nome: str | None = Query(None),
+    acao: str | None = Query(None),
+    entidade: str | None = Query(None),
+    data_inicio: date | None = Query(None),
+    data_fim: date | None = Query(None),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_atual),
+):
     exigir_configuracoes(db, usuario)
-    return db.query(Auditoria).order_by(Auditoria.criado_em.desc()).limit(200).all()
+    query = db.query(Auditoria)
+    if usuario_nome:
+        query = query.filter(Auditoria.usuario_nome.ilike(f"%{usuario_nome}%"))
+    if acao:
+        query = query.filter(Auditoria.acao.ilike(f"%{acao}%"))
+    if entidade:
+        query = query.filter(Auditoria.entidade.ilike(f"%{entidade}%"))
+    if data_inicio:
+        query = query.filter(Auditoria.criado_em >= datetime.combine(data_inicio, datetime.min.time()))
+    if data_fim:
+        query = query.filter(Auditoria.criado_em <= datetime.combine(data_fim, datetime.max.time()))
+    return query.order_by(Auditoria.criado_em.desc()).limit(500).all()
 
 
 @router.get("/sistema/backups")
@@ -296,6 +401,7 @@ def gerar_backup(request: Request, db: Session = Depends(get_db), usuario: Usuar
             "turmas": [vars(t) for t in db.query(Turma).all()],
             "registros": [vars(r) for r in db.query(Registro).all()],
             "ocorrencias": [vars(o) for o in db.query(Ocorrencia).all()],
+            "matriculas_historico": [vars(m) for m in db.query(MatriculaHistorico).all()],
             "usuarios": [
                 {k: v for k, v in vars(u).items() if k != "senha_hash"}
                 for u in db.query(Usuario).all()
@@ -320,13 +426,96 @@ def gerar_backup(request: Request, db: Session = Depends(get_db), usuario: Usuar
 @router.get("/sistema/backups/{nome}")
 def baixar_backup(nome: str, request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_admin(usuario)
-    caminho = (BACKUP_DIR / nome).resolve()
-    pasta_backup = BACKUP_DIR.resolve()
-    if not caminho.exists() or caminho.parent != pasta_backup:
-        raise HTTPException(status_code=404, detail="Backup nao encontrado")
+    caminho = caminho_backup_seguro(nome)
     registrar_auditoria_sistema(db, usuario, "baixou", "backup", None, nome, request)
     db.commit()
     return FileResponse(caminho, filename=nome, media_type="application/octet-stream")
+
+
+@router.post("/sistema/backups/{nome}/restaurar")
+def restaurar_backup(nome: str, dados: RestaurarBackupRequest, request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    exigir_admin(usuario)
+    if dados.confirmacao != "RESTAURAR":
+        raise HTTPException(status_code=400, detail="Digite RESTAURAR para confirmar")
+    caminho = caminho_backup_seguro(nome)
+    if caminho.suffix.lower() != ".json":
+        raise HTTPException(status_code=400, detail="A restauracao automatica aceita apenas backups JSON gerados pelo sistema.")
+
+    conteudo = json.loads(caminho.read_text(encoding="utf-8"))
+    try:
+        db.query(MatriculaHistorico).delete()
+        db.query(Ocorrencia).delete()
+        db.query(Registro).delete()
+        db.query(Aluno).delete()
+        db.query(Turma).delete()
+        db.query(Curso).delete()
+
+        for item in conteudo.get("cursos", []):
+            db.add(Curso(id=item.get("id"), nome=item.get("nome"), sigla=item.get("sigla")))
+        db.flush()
+        for item in conteudo.get("turmas", []):
+            db.add(Turma(id=item.get("id"), ano=item.get("ano"), letra=item.get("letra"), curso_id=item.get("curso_id")))
+        db.flush()
+        for item in conteudo.get("alunos", []):
+            db.add(Aluno(
+                id=item.get("id"),
+                nome=item.get("nome"),
+                matricula=item.get("matricula"),
+                data_nascimento=parse_data(item.get("data_nascimento")),
+                responsavel=item.get("responsavel"),
+                contato_responsavel=item.get("contato_responsavel"),
+                turma_id=item.get("turma_id"),
+                status=item.get("status") or "ativo",
+                ano_letivo_id=item.get("ano_letivo_id"),
+            ))
+        db.flush()
+        for item in conteudo.get("registros", []):
+            db.add(Registro(
+                id=item.get("id"),
+                aluno_id=item.get("aluno_id"),
+                data=parse_data(item.get("data")),
+                tipo=item.get("tipo"),
+                aula=item.get("aula"),
+                motivo=item.get("motivo"),
+                tem_documento=item.get("tem_documento"),
+                observacoes=item.get("observacoes"),
+                ano_letivo_id=item.get("ano_letivo_id"),
+            ))
+        for item in conteudo.get("ocorrencias", []):
+            db.add(Ocorrencia(
+                id=item.get("id"),
+                aluno_id=item.get("aluno_id"),
+                data=parse_data(item.get("data")),
+                tipo=item.get("tipo"),
+                descricao=item.get("descricao"),
+                medida=item.get("medida"),
+                registrado_por=item.get("registrado_por"),
+                responsavel_notificado=item.get("responsavel_notificado"),
+                numero_ocorrencia=item.get("numero_ocorrencia"),
+                gravidade=item.get("gravidade") or "Leve",
+                status=item.get("status") or "Aberta",
+                acoes_tomadas=item.get("acoes_tomadas"),
+                editado_por=item.get("editado_por"),
+                editado_em=parse_datetime(item.get("editado_em")),
+                ano_letivo_id=item.get("ano_letivo_id"),
+            ))
+        for item in conteudo.get("matriculas_historico", []):
+            db.add(MatriculaHistorico(
+                id=item.get("id"),
+                aluno_id=item.get("aluno_id"),
+                turma_id=item.get("turma_id"),
+                ano_letivo_id=item.get("ano_letivo_id"),
+                status=item.get("status") or "ativo",
+                data_inicio=parse_data(item.get("data_inicio")) or date.today(),
+                data_fim=parse_data(item.get("data_fim")),
+                criado_em=parse_datetime(item.get("criado_em")) or datetime.now(),
+            ))
+        registrar_auditoria_sistema(db, usuario, "restaurou", "backup", None, nome, request)
+        db.commit()
+    except Exception as erro:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao restaurar backup: {erro}")
+    return {"mensagem": "Backup restaurado com sucesso"}
 
 
 @router.get("/sistema/anexos")

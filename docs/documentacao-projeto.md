@@ -53,8 +53,10 @@ Desenvolver um sistema web para auxiliar a escola no controle de alunos, registr
 - Configuracoes da escola.
 - Ano letivo.
 - Backup manual.
+- Restauracao controlada de backup JSON.
 - Anexos.
-- Auditoria.
+- Auditoria com filtros.
+- Manual do usuario dentro do sistema.
 - Deploy em Railway com PostgreSQL.
 
 ### 3.2 Fora do escopo atual
@@ -246,6 +248,10 @@ O sistema deve permitir encerrar um ano letivo, impedindo que ele continue como 
 
 O sistema deve vincular alunos, registros e ocorrencias ao ano letivo ativo no momento do cadastro.
 
+### RF37.3 - Historico de matriculas
+
+O sistema deve registrar o historico de matricula do aluno por turma e ano letivo, permitindo consultar turmas anteriores apos edicoes e viradas de ano.
+
 ### RF38 - Permissoes por perfil
 
 O sistema deve permitir configurar quais modulos cada perfil pode acessar.
@@ -254,9 +260,29 @@ O sistema deve permitir configurar quais modulos cada perfil pode acessar.
 
 O administrador deve poder gerar e baixar backup manual do banco.
 
+### RF39.1 - Restauracao de backup
+
+O administrador deve poder restaurar backups JSON gerados pelo sistema, mediante confirmacao explicita.
+
 ### RF40 - Auditoria
 
 O sistema deve registrar acoes relevantes como criar, editar, excluir, importar, gerar backup, alterar permissoes e enviar anexos.
+
+### RF40.1 - Filtros de auditoria
+
+O sistema deve permitir filtrar logs por usuario, acao, entidade e periodo.
+
+### RF41 - Listas operacionais configuraveis
+
+O sistema deve permitir configurar motivos de atraso, motivos de saida antecipada, tipos de ocorrencia e medidas de ocorrencia.
+
+### RF42 - Manual interno
+
+O sistema deve disponibilizar manual do usuario dentro da propria aplicacao.
+
+### RF43 - Painel inicial por perfil
+
+O sistema deve exibir atalhos na tela inicial de acordo com as permissoes do usuario logado.
 
 ## 7. Requisitos nao funcionais
 
@@ -319,6 +345,7 @@ O sistema deve oferecer rotina manual de backup e permitir armazenamento externo
 | RN10.3 | Para promover uma turma, deve existir a turma equivalente no proximo ano, com mesma letra e curso. |
 | RN10.4 | Alunos, registros e ocorrencias novos devem ser vinculados automaticamente ao ano letivo ativo. |
 | RN10.5 | Um ano letivo encerrado nao deve permanecer ativo para novos lancamentos. |
+| RN10.6 | O historico de matricula deve preservar turma, ano letivo, status e periodo de permanencia do aluno. |
 | RN11 | Coordenadores devem visualizar apenas alunos, turmas e cursos vinculados ao seu perfil. |
 | RN12 | Diretores de turma devem visualizar apenas dados da sua turma. |
 | RN13 | O administrador tem acesso total ao sistema. |
@@ -328,6 +355,7 @@ O sistema deve oferecer rotina manual de backup e permitir armazenamento externo
 | RN17 | Ocorrencias podem ser classificadas por tipo, gravidade e status. |
 | RN18 | Anexos devem estar vinculados a uma entidade e a um identificador. |
 | RN19 | Backups so podem ser gerados por administrador. |
+| RN19.1 | Restauracao automatica de backup exige confirmacao textual e aceita apenas backup JSON gerado pelo sistema. |
 | RN20 | Alteracoes sensiveis devem gerar log de auditoria. |
 | RN21 | Senhas devem ter pelo menos 8 caracteres, com letras e numeros. |
 | RN22 | Em producao, SECRET_KEY deve ser uma chave forte e configurada por variavel de ambiente. |
@@ -414,6 +442,17 @@ Fluxo principal:
 3. Clica em Gerar backup agora.
 4. Sistema gera arquivo de backup.
 5. Usuario pode baixar o arquivo.
+
+### UC06.1 - Restaurar backup
+
+Ator principal: Administrador  
+Objetivo: recuperar dados academicos de um backup anterior.
+
+1. Usuario acessa Configuracoes.
+2. Abre a aba Backup.
+3. Clica em Restaurar no arquivo desejado.
+4. Digita a confirmacao solicitada.
+5. Sistema restaura cursos, turmas, alunos, registros, ocorrencias e historico de matriculas.
 
 ## 10. Fluxos principais
 
@@ -647,6 +686,7 @@ Responsavel por dados da escola, ano letivo, cursos, turmas, permissoes, relator
 | `/dashboard` | Painel gerencial |
 | `/usuarios` | Usuarios |
 | `/configuracoes` | Configuracoes do sistema |
+| `/manual` | Manual do usuario |
 
 ### 14.2 APIs
 
@@ -660,7 +700,7 @@ Responsavel por dados da escola, ano letivo, cursos, turmas, permissoes, relator
 | Registros | `/api/registros/`, `/api/registros/{id}`, `/api/registros/aluno/{aluno_id}` |
 | Ocorrencias | `/api/ocorrencias/`, `/api/ocorrencias/{id}`, `/api/ocorrencias/aluno/{aluno_id}` |
 | Dashboard | `/api/dashboard/gerencial`, `/api/dashboard/resumo`, rankings e graficos |
-| Sistema | configuracoes, anos letivos, permissoes, auditoria, backups, anexos e relatorios |
+| Sistema | configuracoes, listas operacionais, anos letivos, permissoes, auditoria, backups, anexos e relatorios |
 
 ## 15. Seguranca
 
@@ -695,7 +735,7 @@ O sistema registra acoes relevantes, usuario, entidade, detalhes, data, IP e use
 
 ## 16. Backup e recuperacao
 
-O sistema possui funcionalidade de backup manual, acessivel apenas pelo administrador.
+O sistema possui funcionalidade de backup manual e restauracao controlada, acessiveis apenas pelo administrador.
 
 Fluxo:
 
@@ -704,6 +744,7 @@ Fluxo:
 3. Clica em Gerar backup.
 4. Sistema gera arquivo de backup.
 5. Admin baixa e armazena o arquivo em local seguro.
+6. Quando necessario, admin pode restaurar um backup JSON gerado pelo sistema mediante confirmacao textual.
 
 Recomendacao operacional:
 
@@ -809,12 +850,6 @@ Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda na
 - Historico de comunicacao com responsavel.
 - Backup automatico agendado.
 - Exportacao PDF mais refinada.
-- Painel inicial personalizado por perfil.
-- Configuracao dinamica de motivos, medidas e tipos.
-- Aprimoramento do ciclo do ano letivo com historico de matriculas por turma em anos anteriores.
-- Logs de auditoria com filtros avancados.
-- Tela de restauracao de backup.
-- Manual do usuario dentro do proprio sistema.
 
 ## 23. Glossario
 

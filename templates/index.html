@@ -42,6 +42,7 @@
                     {% if permissoes.configuracoes %}
                     <li class="nav-item"><a class="nav-link" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configurações</a></li>
                     {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="/manual"><i class="bi bi-question-circle me-1"></i>Manual</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
@@ -72,12 +73,14 @@
             <img class="hero-logo" src="/static/img/logo-escola.png" alt="Logo da Escola">
             <h1 class="display-5 fw-bold">EEEP GOVERNADOR VIRGÍLIO TÁVORA</h1>
             <p class="lead">Sistema de Gestão Escolar</p>
+            <span class="badge bg-light text-primary text-uppercase">{{ perfil }}</span>
         </div>
     </div>
 
     <!-- Cards -->
     <div class="container my-5">
         <div class="row g-4 justify-content-center">
+            {% if permissoes.alunos %}
             <div class="col-md-4">
                 <div class="card shadow-sm h-100 card-hover">
                     <div class="card-body text-center p-4">
@@ -88,6 +91,8 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+            {% if permissoes.registros %}
             <div class="col-md-4">
                 <div class="card shadow-sm h-100 card-hover">
                     <div class="card-body text-center p-4">
@@ -98,6 +103,8 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+            {% if permissoes.ocorrencias %}
             <div class="col-md-4">
                 <div class="card shadow-sm h-100 card-hover">
                     <div class="card-body text-center p-4">
@@ -105,6 +112,53 @@
                         <h5 class="card-title mt-3">Ocorrências</h5>
                         <p class="card-text text-muted">Registre e acompanhe ocorrências.</p>
                         <a href="/ocorrencias" class="btn btn-danger mt-2">Acessar</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if permissoes.dashboard %}
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100 card-hover">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-bar-chart-fill text-info" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Dashboard</h5>
+                        <p class="card-text text-muted">Acompanhe indicadores e alunos que precisam de atenção.</p>
+                        <a href="/dashboard" class="btn btn-info mt-2">Acessar</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if permissoes.usuarios %}
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100 card-hover">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-person-gear text-secondary" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Usuários</h5>
+                        <p class="card-text text-muted">Gerencie acessos, perfis e permissões do sistema.</p>
+                        <a href="/usuarios" class="btn btn-secondary mt-2">Acessar</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if permissoes.configuracoes %}
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100 card-hover">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-sliders text-success" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Configurações</h5>
+                        <p class="card-text text-muted">Ajuste ano letivo, listas, backup, relatórios e auditoria.</p>
+                        <a href="/configuracoes" class="btn btn-success mt-2">Acessar</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100 card-hover">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-question-circle-fill text-primary" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Manual do Usuário</h5>
+                        <p class="card-text text-muted">Consulte como usar as principais funções do sistema.</p>
+                        <a href="/manual" class="btn btn-outline-primary mt-2">Abrir manual</a>
                     </div>
                 </div>
             </div>

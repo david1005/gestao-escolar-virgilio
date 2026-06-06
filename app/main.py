@@ -121,6 +121,20 @@ def garantir_ano_letivo_atual_e_vinculos():
         db.query(aluno.Aluno).filter(aluno.Aluno.ano_letivo_id == None).update({aluno.Aluno.ano_letivo_id: ano.id})
         db.query(registro.Registro).filter(registro.Registro.ano_letivo_id == None).update({registro.Registro.ano_letivo_id: ano.id})
         db.query(ocorrencia.Ocorrencia).filter(ocorrencia.Ocorrencia.ano_letivo_id == None).update({ocorrencia.Ocorrencia.ano_letivo_id: ano.id})
+        alunos_sem_historico = db.query(aluno.Aluno).filter(
+            ~db.query(sistema.MatriculaHistorico)
+                .filter(sistema.MatriculaHistorico.aluno_id == aluno.Aluno.id)
+                .exists()
+        ).all()
+        for item in alunos_sem_historico:
+            if item.turma_id:
+                db.add(sistema.MatriculaHistorico(
+                    aluno_id=item.id,
+                    turma_id=item.turma_id,
+                    ano_letivo_id=item.ano_letivo_id or ano.id,
+                    status=item.status or "ativo",
+                    data_inicio=ano.data_inicio,
+                ))
         db.commit()
     finally:
         db.close()
@@ -216,15 +230,14 @@ async def root(request: Request):
     usuario = get_usuario_logado(request)
     if not usuario:
         return RedirectResponse(url="/login")
-    destino_por_perfil = {
-        "biblioteca": "/registros",
-        "coordenador": "/dashboard",
-        "diretor_turma": "/dashboard",
-        "ppdt": "/alunos",
-    }
-    if usuario.perfil in destino_por_perfil:
-        return RedirectResponse(url=destino_por_perfil[usuario.perfil])
     return templates.TemplateResponse(request, "index.html", contexto_usuario(usuario))
+
+@app.get("/manual")
+async def pagina_manual(request: Request):
+    usuario = get_usuario_logado(request)
+    if not usuario:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse(request, "manual.html", contexto_usuario(usuario))
 
 @app.get("/alunos")
 async def pagina_alunos(request: Request):
