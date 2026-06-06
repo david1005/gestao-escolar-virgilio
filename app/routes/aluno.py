@@ -71,6 +71,85 @@ def parse_data_nascimento(valor: str) -> date:
     raise ValueError("data_nascimento deve estar em DD/MM/AAAA ou AAAA-MM-DD")
 
 
+def preparar_csv_importacao(arquivo: UploadFile):
+    conteudo = arquivo.file.read().decode("utf-8-sig")
+    linhas_conteudo = conteudo.splitlines()
+    delimitador = ","
+    if linhas_conteudo and linhas_conteudo[0].lower().startswith("sep="):
+        delimitador = linhas_conteudo[0].split("=", 1)[1] or ";"
+        conteudo = "\n".join(linhas_conteudo[1:])
+    elif linhas_conteudo and ";" in linhas_conteudo[0]:
+        delimitador = ";"
+    return csv.DictReader(io.StringIO(conteudo), delimiter=delimitador)
+
+
+def resolver_turma_importacao(db: Session, linha: dict, turma_importacao: Turma | None):
+    if turma_importacao:
+        return turma_importacao
+
+    turma_id = (linha.get("turma_id") or "").strip()
+    if turma_id:
+        turma = db.query(Turma).filter(Turma.id == int(turma_id)).first()
+        if not turma:
+            raise ValueError("turma nao encontrada")
+        return turma
+
+    ano = int((linha.get("ano") or "").strip())
+    letra = (linha.get("letra") or "").strip().upper()
+    curso_nome = (linha.get("curso") or "").strip().lower()
+    turmas = db.query(Turma).filter(Turma.ano == ano, Turma.letra == letra).all()
+    if curso_nome:
+        cursos = {c.id: c for c in db.query(Curso).all()}
+        turmas = [t for t in turmas if cursos.get(t.curso_id) and cursos[t.curso_id].nome.lower() == curso_nome]
+    if not turmas:
+        raise ValueError("turma nao encontrada")
+    return turmas[0]
+
+
+def label_turma_importacao(db: Session, turma: Turma | None):
+    if not turma:
+        return "-"
+    curso = db.query(Curso).filter(Curso.id == turma.curso_id).first()
+    return f"{turma.ano}º {turma.letra} - {curso.nome if curso else ''}"
+
+
+def analisar_linhas_importacao(db: Session, leitor, turma_importacao: Turma | None):
+    previa = []
+    totais = {"criar": 0, "ignorar": 0, "erro": 0}
+
+    for indice, linha in enumerate(leitor, start=2):
+        matricula = (linha.get("matricula") or "").strip()
+        item = {
+            "linha": indice,
+            "nome": (linha.get("nome") or "").strip(),
+            "matricula": matricula,
+            "turma": "-",
+            "status": "criar",
+            "mensagem": "Pronto para importar",
+        }
+        try:
+            if not matricula:
+                item["status"] = "erro"
+                item["mensagem"] = "Matricula obrigatoria"
+            elif db.query(Aluno).filter(Aluno.matricula == matricula).first():
+                item["status"] = "ignorar"
+                item["mensagem"] = "Matricula ja cadastrada"
+            else:
+                turma = resolver_turma_importacao(db, linha, turma_importacao)
+                item["turma"] = label_turma_importacao(db, turma)
+                parse_data_nascimento(linha.get("data_nascimento") or "")
+                if not item["nome"] or not (linha.get("responsavel") or "").strip() or not (linha.get("contato_responsavel") or "").strip():
+                    raise ValueError("campos obrigatorios ausentes")
+        except Exception as erro:
+            item["status"] = "erro"
+            item["mensagem"] = str(erro)
+
+        totais[item["status"]] += 1
+        previa.append(item)
+
+    return {"totais": totais, "linhas": previa}
+
+
 def calcular_previa_virada(db: Session):
     turmas = db.query(Turma).all()
     alunos = db.query(Aluno).filter(Aluno.status == "ativo").all()
@@ -428,16 +507,7 @@ def importar_alunos_csv(
     if usuario.perfil not in ["admin", "ppdt"]:
         raise HTTPException(status_code=403, detail="Acesso negado")
 
-    conteudo = arquivo.file.read().decode("utf-8-sig")
-    linhas_conteudo = conteudo.splitlines()
-    delimitador = ","
-    if linhas_conteudo and linhas_conteudo[0].lower().startswith("sep="):
-        delimitador = linhas_conteudo[0].split("=", 1)[1] or ";"
-        conteudo = "\n".join(linhas_conteudo[1:])
-    elif linhas_conteudo and ";" in linhas_conteudo[0]:
-        delimitador = ";"
-
-    leitor = csv.DictReader(io.StringIO(conteudo), delimiter=delimitador)
+    leitor = preparar_csv_importacao(arquivo)
 
     criados = 0
     ignorados = 0
@@ -457,22 +527,7 @@ def importar_alunos_csv(
                 ignorados += 1
                 continue
 
-            turma_id = (linha.get("turma_id") or "").strip()
-            if turma_importacao:
-                turma_id = turma_importacao.id
-            elif turma_id:
-                turma_id = int(turma_id)
-            else:
-                ano = int((linha.get("ano") or "").strip())
-                letra = (linha.get("letra") or "").strip().upper()
-                curso_nome = (linha.get("curso") or "").strip().lower()
-                turmas = db.query(Turma).filter(Turma.ano == ano, Turma.letra == letra).all()
-                if curso_nome:
-                    cursos = {c.id: c for c in db.query(Curso).all()}
-                    turmas = [t for t in turmas if cursos.get(t.curso_id) and cursos[t.curso_id].nome.lower() == curso_nome]
-                if not turmas:
-                    raise ValueError("turma nao encontrada")
-                turma_id = turmas[0].id
+            turma = resolver_turma_importacao(db, linha, turma_importacao)
 
             aluno = Aluno(
                 nome=(linha.get("nome") or "").strip(),
@@ -480,7 +535,7 @@ def importar_alunos_csv(
                 data_nascimento=parse_data_nascimento(linha.get("data_nascimento") or ""),
                 responsavel=(linha.get("responsavel") or "").strip(),
                 contato_responsavel=(linha.get("contato_responsavel") or "").strip(),
-                turma_id=turma_id,
+                turma_id=turma.id,
                 status=(linha.get("status") or "ativo").strip() or "ativo",
                 ano_letivo_id=ano_letivo_importacao.id,
             )
@@ -502,3 +557,25 @@ def importar_alunos_csv(
         "ignorados": ignorados,
         "erros": erros[:10],
     }
+
+
+@router.post("/alunos/importar-csv/preview")
+def preview_importar_alunos_csv(
+    arquivo: UploadFile = File(...),
+    curso_id: int | None = Form(None),
+    ano: int | None = Form(None),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_atual),
+):
+    exigir_alunos(db, usuario)
+    if usuario.perfil not in ["admin", "ppdt"]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    turma_importacao = None
+    if curso_id and ano:
+        turma_importacao = db.query(Turma).filter(Turma.curso_id == curso_id, Turma.ano == ano).first()
+        if not turma_importacao:
+            raise HTTPException(status_code=400, detail="Turma nao encontrada para o curso e ano selecionados")
+
+    leitor = preparar_csv_importacao(arquivo)
+    return analisar_linhas_importacao(db, leitor, turma_importacao)

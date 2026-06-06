@@ -133,6 +133,28 @@
         </div>
         
         <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span><i class="bi bi-list-task me-2 text-primary"></i>Linha do Tempo do Aluno</span>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted" id="linhaTempoContador"></small>
+                    <select class="form-select form-select-sm" id="linhaTempoFiltro" style="width: 180px;">
+                        <option value="">Todos os eventos</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="linhaTempoAluno" class="timeline-aluno">
+                    <div class="text-center text-muted">Carregando...</div>
+                </div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-primary btn-sm d-none" id="btnLinhaTempoMais" onclick="mostrarMaisLinhaTempo()">
+                        Ver mais eventos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
             <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-paperclip me-2 text-primary"></i>Documentos do Aluno</span>
                 <button class="btn btn-sm btn-outline-primary" onclick="abrirAnexos('aluno', alunoId, 'Documentos do aluno')">
@@ -228,6 +250,6 @@
         const alunoId = {{ aluno_id }};
     </script>
     <script src="/static/js/anexos.js?v=1"></script>
-    <script src="/static/js/aluno.js?v=4"></script>
+    <script src="/static/js/aluno.js?v=6"></script>
 </body>
 </html>

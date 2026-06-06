@@ -644,14 +644,14 @@ def relatorio_oficial(
     ocorrencias = db.query(Ocorrencia).all()
 
     linhas = []
-    titulo = "Relatorio por turma"
+    titulo = "Relatório por turma"
     if tipo == "alunos":
-        titulo = "Relatorio de alunos"
+        titulo = "Relatório de alunos"
         for aluno in alunos:
             linhas.append([aluno.nome, aluno.matricula, turma_label(turmas.get(aluno.turma_id), cursos), aluno.status])
-        cabecalho = ["Aluno", "Matricula", "Turma", "Status"]
+        cabecalho = ["Aluno", "Matrícula", "Turma", "Status"]
     elif tipo == "ocorrencias":
-        titulo = "Relatorio de ocorrencias"
+        titulo = "Relatório de ocorrências"
         for ocorrencia in ocorrencias:
             aluno = next((a for a in alunos if a.id == ocorrencia.aluno_id), None)
             if aluno:
@@ -669,10 +669,21 @@ def relatorio_oficial(
                 sum(1 for r in registros if r.aluno_id in ids and r.tipo != "Atraso"),
                 sum(1 for o in ocorrencias if o.aluno_id in ids),
             ])
-        cabecalho = ["Turma", "Alunos", "Atrasos", "Saidas", "Ocorrencias"]
+        cabecalho = ["Turma", "Alunos", "Atrasos", "Saídas", "Ocorrências"]
 
-    tabela = "".join("<tr>" + "".join(f"<td>{col}</td>" for col in linha) + "</tr>" for linha in linhas)
-    head = "".join(f"<th>{col}</th>" for col in cabecalho)
+    turma_filtro = turmas.get(turma_id) if turma_id else None
+    filtros_usados = [
+        f"Tipo: {titulo}",
+        f"Turma: {turma_label(turma_filtro, cursos) if turma_filtro else 'Todas'}",
+        f"Emitido por: {usuario.nome}",
+    ]
+    numero_documento = f"REL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    tabela = "".join(
+        f"<tr><td class='num'>{indice}</td>" + "".join(f"<td>{col}</td>" for col in linha) + "</tr>"
+        for indice, linha in enumerate(linhas, start=1)
+    )
+    head = "<th class='num'>#</th>" + "".join(f"<th>{col}</th>" for col in cabecalho)
+    filtros_html = "".join(f"<span>{item}</span>" for item in filtros_usados)
     logo_url = "/static/img/logo-escola.png"
     return f"""
     <!doctype html>
@@ -681,33 +692,51 @@ def relatorio_oficial(
         <meta charset="utf-8">
         <title>{titulo}</title>
         <style>
-            body {{ font-family: Arial, sans-serif; color: #111; margin: 32px; }}
-            .topo {{ display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 20px; }}
-            .logo {{ width: 74px; height: 74px; object-fit: contain; }}
+            @page {{ size: A4; margin: 14mm; }}
+            body {{ font-family: Arial, sans-serif; color: #111; margin: 0; font-size: 12px; }}
+            .barra-acoes {{ margin-bottom: 14px; }}
+            .topo {{ display: flex; align-items: center; gap: 18px; border-bottom: 3px solid #0d6efd; padding-bottom: 12px; margin-bottom: 12px; }}
+            .logo {{ width: 82px; height: 82px; object-fit: contain; }}
             .cabecalho {{ flex: 1; text-align: center; }}
-            h1 {{ margin: 0; font-size: 22px; }}
-            h2 {{ margin: 8px 0 0; font-size: 18px; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 12px; }}
-            th, td {{ border: 1px solid #999; padding: 7px; text-align: left; }}
-            th {{ background: #eee; }}
-            .rodape {{ margin-top: 32px; display: flex; justify-content: space-between; font-size: 12px; }}
-            @media print {{ button {{ display: none; }} body {{ margin: 18px; }} }}
+            h1 {{ margin: 0; font-size: 20px; text-transform: uppercase; }}
+            h2 {{ margin: 8px 0 0; font-size: 17px; }}
+            .sub {{ margin-top: 4px; color: #555; }}
+            .documento {{ text-align: right; color: #555; margin-bottom: 10px; }}
+            .filtros {{ display: flex; flex-wrap: wrap; gap: 8px; border: 1px solid #ccc; background: #f8f9fa; padding: 8px; margin: 12px 0 16px; }}
+            .filtros span {{ border-right: 1px solid #ccc; padding-right: 8px; }}
+            .filtros span:last-child {{ border-right: 0; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }}
+            th, td {{ border: 1px solid #999; padding: 6px; text-align: left; vertical-align: top; }}
+            th {{ background: #e9ecef; font-weight: 700; }}
+            tr:nth-child(even) td {{ background: #fbfbfb; }}
+            .num {{ width: 32px; text-align: center; }}
+            .assinaturas {{ display: grid; grid-template-columns: 1fr 1fr; gap: 46px; margin-top: 58px; }}
+            .assinatura {{ text-align: center; }}
+            .assinatura .linha {{ border-top: 1px solid #111; margin-bottom: 5px; }}
+            .rodape {{ margin-top: 28px; display: flex; justify-content: space-between; font-size: 10px; color: #555; border-top: 1px solid #ccc; padding-top: 8px; }}
+            @media print {{ .barra-acoes {{ display: none; }} }}
         </style>
     </head>
     <body>
-        <button onclick="window.print()">Imprimir / salvar em PDF</button>
+        <div class="barra-acoes"><button onclick="window.print()">Imprimir / salvar em PDF</button></div>
         <div class="topo">
             <img class="logo" src="{logo_url}" onerror="this.style.display='none'">
             <div class="cabecalho">
                 <h1>{config.get("escola_nome", "")}</h1>
-                <div>{config.get("escola_endereco", "")}</div>
+                <div class="sub">{config.get("escola_endereco", "")}</div>
                 <h2>{titulo}</h2>
             </div>
         </div>
+        <div class="documento">Documento {numero_documento} | Emitido em {datetime.now().strftime("%d/%m/%Y %H:%M")}</div>
+        <div class="filtros">{filtros_html}</div>
         <table><thead><tr>{head}</tr></thead><tbody>{tabela}</tbody></table>
+        <div class="assinaturas">
+            <div class="assinatura"><div class="linha"></div>Responsável pela emissão</div>
+            <div class="assinatura"><div class="linha"></div>Gestão / Coordenação</div>
+        </div>
         <div class="rodape">
-            <div>Emitido por: {usuario.nome}</div>
-            <div>{datetime.now().strftime("%d/%m/%Y %H:%M")}</div>
+            <div>Sistema de Gestão Escolar</div>
+            <div>{numero_documento}</div>
         </div>
     </body>
     </html>

@@ -1,10 +1,12 @@
 let dadosAluno = null;
+let linhaTempoCompleta = [];
+let linhaTempoLimite = 8;
 
 async function carregarAluno() {
     const res = await fetch(`/api/dashboard/aluno/${alunoId}`);
     dadosAluno = await res.json();
 
-    const { aluno, resumo, ocorrencias, registros } = dadosAluno;
+    const { aluno, resumo, ocorrencias, registros, matriculas = [], linha_tempo = [] } = dadosAluno;
     gerarGrafico(registros, ocorrencias);
 
     // Cabeçalho
@@ -76,7 +78,76 @@ async function carregarAluno() {
         }
     }
 
+    prepararLinhaTempo(linha_tempo);
+
     carregarAnexosAluno();
+}
+
+function prepararLinhaTempo(itens) {
+    linhaTempoCompleta = itens || [];
+    linhaTempoLimite = 8;
+
+    const filtro = document.getElementById('linhaTempoFiltro');
+    if (filtro) {
+        const tipos = Array.from(new Set(linhaTempoCompleta.map(item => item.tipo))).sort();
+        filtro.innerHTML = '<option value="">Todos os eventos</option>' +
+            tipos.map(tipo => `<option value="${tipo}">${tipo}</option>`).join('');
+        filtro.onchange = () => {
+            linhaTempoLimite = 8;
+            renderizarLinhaTempo();
+        };
+    }
+
+    renderizarLinhaTempo();
+}
+
+function eventosLinhaTempoFiltrados() {
+    const tipo = document.getElementById('linhaTempoFiltro')?.value || '';
+    return tipo ? linhaTempoCompleta.filter(item => item.tipo === tipo) : linhaTempoCompleta;
+}
+
+function mostrarMaisLinhaTempo() {
+    linhaTempoLimite += 8;
+    renderizarLinhaTempo();
+}
+
+function renderizarLinhaTempo() {
+    const container = document.getElementById('linhaTempoAluno');
+    if (!container) return;
+    const itens = eventosLinhaTempoFiltrados();
+    const visiveis = itens.slice(0, linhaTempoLimite);
+    const contador = document.getElementById('linhaTempoContador');
+    const botaoMais = document.getElementById('btnLinhaTempoMais');
+
+    if (contador) {
+        contador.textContent = itens.length ? `${Math.min(linhaTempoLimite, itens.length)} de ${itens.length}` : '';
+    }
+    if (botaoMais) {
+        botaoMais.classList.toggle('d-none', linhaTempoLimite >= itens.length);
+    }
+
+    if (!itens.length) {
+        container.innerHTML = '<div class="text-center text-muted">Nenhum evento registrado.</div>';
+        return;
+    }
+
+    container.innerHTML = visiveis.map(item => `
+        <div class="d-flex gap-3 pb-3 mb-3 border-bottom">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;">
+                <i class="bi ${item.icone || 'bi-dot'}"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <div>
+                        <span class="badge bg-secondary me-2">${item.tipo}</span>
+                        <strong>${item.titulo}</strong>
+                    </div>
+                    <small class="text-muted">${item.data}</small>
+                </div>
+                <div class="text-muted mt-1">${item.descricao || '-'}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
 async function carregarAnexosAluno() {

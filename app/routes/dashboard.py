@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from collections import defaultdict
 from datetime import date
 from app.database import get_db
 from app.models.aluno import Aluno, Turma, Curso
 from app.models.registro import Registro
 from app.models.ocorrencia import Ocorrencia
-from app.models.sistema import AnoLetivo, MatriculaHistorico
+from app.models.sistema import Anexo, AnoLetivo, MatriculaHistorico
 from app.models.usuario import Usuario
 from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
 
@@ -359,6 +359,13 @@ def dashboard_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuar
     matriculas = db.query(MatriculaHistorico).filter(
         MatriculaHistorico.aluno_id == aluno_id
     ).order_by(MatriculaHistorico.data_inicio.desc()).all()
+    registro_ids = [r.id for r in registros]
+    ocorrencia_ids = [o.id for o in ocorrencias]
+    anexos = db.query(Anexo).filter(or_(
+        (Anexo.entidade == "aluno") & (Anexo.entidade_id == aluno_id),
+        (Anexo.entidade == "registro") & (Anexo.entidade_id.in_(registro_ids or [0])),
+        (Anexo.entidade == "ocorrencia") & (Anexo.entidade_id.in_(ocorrencia_ids or [0])),
+    )).all()
     turmas = {t.id: t for t in db.query(Turma).all()}
     cursos = {c.id: c for c in db.query(Curso).all()}
     anos = {a.id: a for a in db.query(AnoLetivo).all()}
@@ -373,6 +380,51 @@ def dashboard_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuar
         proxima_medida = "Advertência + Notificação ao responsável"
     else:
         proxima_medida = "Suspensão + Notificação ao responsável"
+
+    linha_tempo = []
+    for matricula in matriculas:
+        turma_hist = turmas.get(matricula.turma_id)
+        curso_hist = cursos.get(turma_hist.curso_id) if turma_hist else None
+        linha_tempo.append({
+            "data": str(matricula.data_inicio),
+            "tipo": "Matrícula",
+            "icone": "bi-calendar-check",
+            "titulo": "Matrícula registrada" if matricula.status == "ativo" else f"Matrícula {matricula.status}",
+            "descricao": f"{nome_turma(turma_hist, curso_hist)} - {anos.get(matricula.ano_letivo_id).nome if anos.get(matricula.ano_letivo_id) else '-'}",
+        })
+    for registro in registros:
+        linha_tempo.append({
+            "data": str(registro.data),
+            "tipo": registro.tipo,
+            "icone": "bi-clock-history" if registro.tipo == "Atraso" else "bi-box-arrow-right",
+            "titulo": registro.tipo,
+            "descricao": f"{registro.aula}ª aula - {registro.motivo}",
+        })
+    for ocorrencia in ocorrencias:
+        linha_tempo.append({
+            "data": str(ocorrencia.data),
+            "tipo": "Ocorrência",
+            "icone": "bi-exclamation-triangle",
+            "titulo": ocorrencia.tipo,
+            "descricao": ocorrencia.descricao,
+        })
+        if ocorrencia.responsavel_notificado:
+            linha_tempo.append({
+                "data": str(ocorrencia.data),
+                "tipo": "Responsável",
+                "icone": "bi-telephone",
+                "titulo": "Responsável notificado",
+                "descricao": f"Ocorrência: {ocorrencia.tipo}",
+            })
+    for anexo in anexos:
+        linha_tempo.append({
+            "data": str(anexo.criado_em.date()),
+            "tipo": "Anexo",
+            "icone": "bi-paperclip",
+            "titulo": "Documento anexado",
+            "descricao": anexo.nome_original,
+        })
+    linha_tempo = sorted(linha_tempo, key=lambda item: item["data"], reverse=True)
 
     return {
         "aluno": {
@@ -400,5 +452,6 @@ def dashboard_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuar
                 "data_fim": str(m.data_fim) if m.data_fim else None,
             }
             for m in matriculas
-        ]
+        ],
+        "linha_tempo": linha_tempo,
     }

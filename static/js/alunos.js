@@ -452,27 +452,94 @@ abrirModalImportacao = function () {
     document.getElementById('importCurso').value = '';
     document.getElementById('importAno').value = '';
     document.getElementById('arquivoImportacao').value = '';
+    document.getElementById('previewImportacao').classList.add('d-none');
+    document.getElementById('tabelaPreviewImportacao').innerHTML = '';
+    document.getElementById('btnConfirmarImportacao').disabled = true;
     new bootstrap.Modal(document.getElementById('modalImportacao')).show();
 };
 
-importarAlunosCSV = async function () {
+function textoImportacaoSeguro(valor) {
+    return String(valor ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function montarFormImportacao() {
     const arquivo = document.getElementById('arquivoImportacao').files[0];
     const cursoId = document.getElementById('importCurso').value;
     const ano = document.getElementById('importAno').value;
 
     if (!arquivo) {
         alert('Selecione um arquivo CSV.');
-        return;
+        return null;
     }
     if (!cursoId || !ano) {
         alert('Selecione o curso e o ano da turma.');
-        return;
+        return null;
     }
 
     const formData = new FormData();
     formData.append('arquivo', arquivo);
     formData.append('curso_id', cursoId);
     formData.append('ano', ano);
+    return formData;
+}
+
+function renderPreviewImportacao(resultado) {
+    document.getElementById('previewImportacao').classList.remove('d-none');
+    document.getElementById('previewCriar').textContent = `Criar: ${resultado.totais?.criar || 0}`;
+    document.getElementById('previewIgnorar').textContent = `Ignorar: ${resultado.totais?.ignorar || 0}`;
+    document.getElementById('previewErro').textContent = `Erros: ${resultado.totais?.erro || 0}`;
+
+    const badge = {
+        criar: 'bg-success',
+        ignorar: 'bg-secondary',
+        erro: 'bg-danger'
+    };
+
+    document.getElementById('tabelaPreviewImportacao').innerHTML = (resultado.linhas || []).map(item => `
+        <tr>
+            <td>${item.linha}</td>
+            <td>${textoImportacaoSeguro(item.nome)}</td>
+            <td>${textoImportacaoSeguro(item.matricula)}</td>
+            <td>${textoImportacaoSeguro(item.turma)}</td>
+            <td><span class="badge ${badge[item.status] || 'bg-secondary'}">${item.status}</span></td>
+            <td>${textoImportacaoSeguro(item.mensagem)}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="6" class="text-center text-muted">Nenhuma linha encontrada.</td></tr>';
+
+    document.getElementById('btnConfirmarImportacao').disabled = !(resultado.totais?.criar > 0);
+}
+
+previsualizarImportacao = async function () {
+    const formData = montarFormImportacao();
+    if (!formData) return;
+
+    try {
+        const resposta = await fetch('/api/alunos/importar-csv/preview', {
+            method: 'POST',
+            body: formData
+        });
+        const resultado = await resposta.json();
+
+        if (!resposta.ok) {
+            alert(resultado.detail || 'Erro ao pre-visualizar importacao.');
+            return;
+        }
+
+        renderPreviewImportacao(resultado);
+    } catch (error) {
+        console.error('Erro ao pre-visualizar CSV:', error);
+        alert('Erro ao pre-visualizar CSV.');
+    }
+};
+
+importarAlunosCSV = async function () {
+    const formData = montarFormImportacao();
+    if (!formData) return;
 
     try {
         const resposta = await fetch('/api/alunos/importar-csv', {
@@ -539,5 +606,16 @@ realizarViradaAno = async function () {
         alert('Erro ao realizar virada de ano.');
     }
 };
+
+['arquivoImportacao', 'importCurso', 'importAno'].forEach(id => {
+    const campo = document.getElementById(id);
+    if (campo) {
+        campo.addEventListener('change', () => {
+            document.getElementById('previewImportacao')?.classList.add('d-none');
+            const botao = document.getElementById('btnConfirmarImportacao');
+            if (botao) botao.disabled = true;
+        });
+    }
+});
 
 carregarDados();
