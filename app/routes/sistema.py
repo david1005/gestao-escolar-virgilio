@@ -44,10 +44,10 @@ CONFIG_PADRAO = {
     "escola_endereco": "R. Pergentino Silva, S/N - Seminario, Crato-CE",
     "escola_telefone": "",
     "responsavel_sistema": "Secretaria / Coordenacao",
-    "motivos_atraso": "Transporte\nConsulta medica\nExame medico\nAtestado medico\nProblema odontologico\nCompromisso familiar\nQuestao judicial\nAtividade externa da escola",
-    "motivos_saida": "Consulta medica\nExame medico\nMal-estar\nResponsavel solicitou\nProblema odontologico\nCompromisso familiar\nDoenca na familia\nQuestao judicial\nAtividade externa da escola",
-    "tipos_ocorrencia": "Indisciplina\nConflito entre alunos\nUso indevido de celular\nAgressao verbal\nAgressao fisica\nDano ao patrimonio\nFalta de material\nOutro",
-    "medidas_ocorrencia": "So registro\nAdvertencia + Notificacao ao responsavel\nSuspensao + Notificacao ao responsavel\nEncaminhamento para coordenacao\nReuniao com responsavel",
+    "motivos_atraso": "Transporte\nConsulta médica\nExame médico\nAtestado médico\nProblema odontológico\nCompromisso familiar\nQuestão judicial\nAtividade externa da escola",
+    "motivos_saida": "Consulta médica\nExame médico\nMal-estar\nResponsável solicitou\nProblema odontológico\nCompromisso familiar\nDoença na família\nQuestão judicial\nAtividade externa da escola",
+    "tipos_ocorrencia": "Indisciplina\nConflito entre alunos\nUso indevido de celular\nAgressão verbal\nAgressão física\nDano ao patrimônio\nFalta de material\nOutro",
+    "medidas_ocorrencia": "Só registro\nAdvertência + Notificação ao responsável\nSuspensão + Notificação ao responsável\nEncaminhamento para coordenação\nReunião com responsável",
 }
 
 

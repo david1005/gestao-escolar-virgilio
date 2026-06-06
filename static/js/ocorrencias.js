@@ -175,7 +175,7 @@ function renderizarOcorrencias(lista) {
                     <button class="btn btn-sm btn-outline-success me-1" onclick="gerarPDF(${o.id})" title="Imprimir termo">
                         <i class="bi bi-file-pdf"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="abrirAnexos('ocorrencia', ${o.id}, 'Anexos da ocorrencia')" title="Anexos">
+                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="abrirAnexos('ocorrencia', ${o.id}, 'Documentos da ocorrencia')" title="Documentos">
                         <i class="bi bi-paperclip"></i>
                     </button>
                     ${perfilUsuario === 'admin' || perfilUsuario === 'ppdt' ? `
@@ -314,15 +314,7 @@ async function salvarOcorrencia() {
     });
 
     if (res.ok) {
-        const ocorrenciaCriada = await res.json();
-        const arquivo = document.getElementById('arquivoOcorrencia').files[0];
-        if (arquivo) {
-            try {
-                await enviarAnexoPara('ocorrencia', ocorrenciaCriada.id, arquivo);
-            } catch (erro) {
-                alert(`Ocorrencia salva, mas o anexo falhou: ${erro.message}`);
-            }
-        }
+        await res.json();
         bootstrap.Modal.getInstance(document.getElementById('modalOcorrencia')).hide();
         limparFormulario();
         carregarDados();
@@ -382,6 +374,19 @@ function gerarPDF(id) {
     const o = ocorrencias.find(o => o.id === id);
     if (!o) return;
 
+    const textoDocumento = (valor) => String(valor || '-')
+        .replaceAll('So registro', 'Só registro')
+        .replaceAll('Advertencia', 'Advertência')
+        .replaceAll('Notificacao', 'Notificação')
+        .replaceAll('Suspensao', 'Suspensão')
+        .replaceAll('Responsavel', 'Responsável')
+        .replaceAll('Coordenacao', 'Coordenação')
+        .replaceAll('Ocorrencia', 'Ocorrência')
+        .replaceAll('Informacoes', 'Informações')
+        .replaceAll('Gestao', 'Gestão')
+        .replaceAll('Educacao', 'Educação')
+        .replaceAll('Virgilio Tavora', 'Virgílio Távora');
+
     const nomeAluno = getNomeAluno(o.aluno_id);
     const turma = getTurmaAluno(o.aluno_id);
     const aluno = getAluno(o.aluno_id);
@@ -395,7 +400,7 @@ function gerarPDF(id) {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Registro de Ocorrencia</title>
+            <title>Registro de Ocorrência</title>
             <style>
                 @page { size: A4; margin: 14mm; }
                 body { font-family: Arial, sans-serif; color: #222; font-size: 13px; line-height: 1.35; }
@@ -425,49 +430,48 @@ function gerarPDF(id) {
             <div class="topo">
                 <img class="logo" src="${logoUrl}" onerror="this.style.display='none'">
                 <div class="cabecalho">
-                    <div class="orgao">Secretaria da Educacao do Estado do Ceara</div>
-                    <h2>EEEP Governador Virgilio Tavora</h2>
-                    <h3>Registro de Ocorrencia Escolar</h3>
+                    <h2>EEEP Governador Virgílio Távora</h2>
+                    <h3>Registro de Ocorrência Escolar</h3>
                 </div>
             </div>
             <div class="numero">Documento N\u00ba ${numDoc} | Impresso em ${new Date().toLocaleString('pt-BR')}</div>
 
             <div class="secao">
-                <div class="secao-titulo">1. Identificacao do aluno</div>
+                <div class="secao-titulo">1. Identificação do aluno</div>
                 <div class="grid">
-                    <div class="campo"><span>Aluno:</span> ${nomeAluno}</div>
+                    <div class="campo"><span>Aluno:</span> ${textoDocumento(nomeAluno)}</div>
                     <div class="campo"><span>Matricula:</span> ${matricula}</div>
-                    <div class="campo"><span>Turma:</span> ${turma}</div>
-                    <div class="campo"><span>Data da ocorrencia:</span> ${o.data}</div>
-                    <div class="campo"><span>Responsavel:</span> ${responsavel}</div>
+                    <div class="campo"><span>Turma:</span> ${textoDocumento(turma)}</div>
+                    <div class="campo"><span>Data da ocorrência:</span> ${o.data}</div>
+                    <div class="campo"><span>Responsável:</span> ${textoDocumento(responsavel)}</div>
                     <div class="campo"><span>Contato:</span> ${contatoResponsavel}</div>
                 </div>
             </div>
 
             <div class="secao">
-                <div class="secao-titulo">2. Dados da ocorrencia</div>
+                <div class="secao-titulo">2. Dados da ocorrência</div>
                 <div class="grid">
-                    <div class="campo"><span>N\u00ba da ocorrencia do aluno:</span> ${o.numero_ocorrencia}\u00aa ocorrencia</div>
-                    <div class="campo"><span>Tipo:</span> ${o.tipo}</div>
+                    <div class="campo"><span>N\u00ba da ocorrência do aluno:</span> ${o.numero_ocorrencia}\u00aa ocorrência</div>
+                    <div class="campo"><span>Tipo:</span> ${textoDocumento(o.tipo)}</div>
                     <div class="campo"><span>Gravidade:</span> ${o.gravidade || 'Leve'}</div>
                     <div class="campo"><span>Status:</span> ${o.status || 'Aberta'}</div>
-                    <div class="campo"><span>Registrado por:</span> ${o.registrado_por}</div>
-                    <div class="campo"><span>Responsavel notificado:</span> ${o.responsavel_notificado ? 'Sim' : 'Nao'}</div>
+                    <div class="campo"><span>Registrado por:</span> ${textoDocumento(o.registrado_por)}</div>
+                    <div class="campo"><span>Responsável notificado:</span> ${o.responsavel_notificado ? 'Sim' : 'Não'}</div>
                 </div>
             </div>
 
             <div class="secao">
-                <div class="secao-titulo">3. Descricao do ocorrido</div>
-                <div class="texto-box">${o.descricao || '-'}</div>
+                <div class="secao-titulo">3. Descrição do ocorrido</div>
+                <div class="texto-box">${textoDocumento(o.descricao)}</div>
             </div>
 
             <div class="secao">
                 <div class="secao-titulo">4. Medidas e encaminhamentos</div>
-                <div class="campo"><span>Medida tomada:</span> ${o.medida}</div>
-                <div class="campo"><span>Acoes tomadas:</span></div>
-                <div class="texto-box">${o.acoes_tomadas || '-'}</div>
+                <div class="campo"><span>Medida tomada:</span> ${textoDocumento(o.medida)}</div>
+                <div class="campo"><span>Ações tomadas:</span></div>
+                <div class="texto-box">${textoDocumento(o.acoes_tomadas)}</div>
                 <div class="ciencia">
-                    Declaro estar ciente das informacoes registradas neste documento e das medidas adotadas pela escola.
+                    Declaro estar ciente das informações registradas neste documento e das medidas adotadas pela escola.
                 </div>
             </div>
 
@@ -477,17 +481,17 @@ function gerarPDF(id) {
                 <div class="assinatura">
                     <div class="linha-ass"></div>
                     <div>Aluno</div>
-                    <small>${nomeAluno}</small>
+                    <small>${textoDocumento(nomeAluno)}</small>
                 </div>
                 <div class="assinatura">
                     <div class="linha-ass"></div>
-                    <div>Responsavel</div>
-                    <small>${responsavel}</small>
+                    <div>Responsável</div>
+                    <small>${textoDocumento(responsavel)}</small>
                 </div>
                 <div class="assinatura">
                     <div class="linha-ass"></div>
-                    <div>Coordenacao</div>
-                    <small>${o.registrado_por}</small>
+                    <div>Coordenação</div>
+                    <small>${textoDocumento(o.registrado_por)}</small>
                 </div>
                 <div class="assinatura">
                     <div class="linha-ass"></div>
@@ -496,7 +500,7 @@ function gerarPDF(id) {
                 </div>
             </div>
 
-            <div class="rodape">Documento gerado pelo Sistema de Gestao Escolar</div>
+            <div class="rodape">Documento gerado pelo Sistema de Gestão Escolar</div>
         </body>
         </html>
     `;
@@ -523,7 +527,6 @@ function limparFormulario() {
     document.getElementById('gravidade').value = 'Leve';
     document.getElementById('status').value = 'Aberta';
     document.getElementById('responsavel_notificado').checked = false;
-    document.getElementById('arquivoOcorrencia').value = '';
     document.getElementById('alertaMedida').classList.add('d-none');
 }
 
