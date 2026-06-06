@@ -749,7 +749,8 @@ def relatorio_oficial(
         <style>
             @page {{ size: A4; margin: 14mm; }}
             body {{ font-family: Arial, sans-serif; color: #111; margin: 0; font-size: 12px; }}
-            .barra-acoes {{ margin-bottom: 14px; }}
+            .barra-acoes {{ margin-top: 18px; text-align: right; }}
+            .barra-acoes button {{ border: 1px solid #0d6efd; background: #0d6efd; color: #fff; border-radius: 4px; padding: 8px 12px; cursor: pointer; }}
             .topo {{ display: flex; align-items: center; gap: 18px; border-bottom: 3px solid #0d6efd; padding-bottom: 12px; margin-bottom: 12px; }}
             .logo {{ width: 82px; height: 82px; object-fit: contain; }}
             .cabecalho {{ flex: 1; text-align: center; }}
@@ -773,7 +774,6 @@ def relatorio_oficial(
         </style>
     </head>
     <body>
-        <div class="barra-acoes"><button onclick="window.print()">Imprimir / salvar em PDF</button></div>
         <div class="topo">
             <img class="logo" src="{logo_url}" onerror="this.style.display='none'">
             <div class="cabecalho">
@@ -793,6 +793,7 @@ def relatorio_oficial(
             <div>Sistema de Gestão Escolar</div>
             <div>{numero_documento}</div>
         </div>
+        <div class="barra-acoes"><button onclick="window.print()">Imprimir / salvar em PDF</button></div>
     </body>
     </html>
     """
