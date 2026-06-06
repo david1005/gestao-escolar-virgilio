@@ -343,6 +343,7 @@ function imprimirAutorizacao(id) {
         ? 'Aluno autorizado a sair antecipadamente da escola.'
         : 'Aluno autorizado a entrar em sala apos passar pela secretaria.';
     const destinatario = tipoSaida ? 'Entregar ao vigilante' : 'Entregar ao professor';
+    const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const janela = window.open('', '_blank', 'width=420,height=640');
     janela.document.write(`
@@ -361,6 +362,7 @@ function imprimirAutorizacao(id) {
                 }
                 .ticket { padding: 6px 0; }
                 .center { text-align: center; }
+                .logo { width: 18mm; height: 18mm; object-fit: contain; margin-bottom: 2px; }
                 .titulo { font-size: 15px; font-weight: 700; margin: 6px 0 2px; }
                 .subtitulo { font-size: 11px; margin-bottom: 8px; }
                 .linha { border-top: 1px dashed #333; margin: 8px 0; }
@@ -378,7 +380,8 @@ function imprimirAutorizacao(id) {
         <body>
             <div class="ticket">
                 <div class="center">
-                    <div><strong>GESTAO ESCOLAR</strong></div>
+                    <img class="logo" src="${logoUrl}" onerror="this.style.display='none'">
+                    <div><strong>EEEP GOVERNADOR VIRGILIO TAVORA</strong></div>
                     <div class="titulo">${titulo}</div>
                     <div class="subtitulo">${destinatario}</div>
                 </div>

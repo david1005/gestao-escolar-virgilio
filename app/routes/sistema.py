@@ -484,6 +484,7 @@ def relatorio_oficial(
 
     tabela = "".join("<tr>" + "".join(f"<td>{col}</td>" for col in linha) + "</tr>" for linha in linhas)
     head = "".join(f"<th>{col}</th>" for col in cabecalho)
+    logo_url = "/static/img/logo-escola.png"
     return f"""
     <!doctype html>
     <html lang="pt-BR">
@@ -492,7 +493,9 @@ def relatorio_oficial(
         <title>{titulo}</title>
         <style>
             body {{ font-family: Arial, sans-serif; color: #111; margin: 32px; }}
-            .topo {{ text-align: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 20px; }}
+            .topo {{ display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 20px; }}
+            .logo {{ width: 74px; height: 74px; object-fit: contain; }}
+            .cabecalho {{ flex: 1; text-align: center; }}
             h1 {{ margin: 0; font-size: 22px; }}
             h2 {{ margin: 8px 0 0; font-size: 18px; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 12px; }}
@@ -505,9 +508,12 @@ def relatorio_oficial(
     <body>
         <button onclick="window.print()">Imprimir / salvar em PDF</button>
         <div class="topo">
-            <h1>{config.get("escola_nome", "")}</h1>
-            <div>{config.get("escola_endereco", "")}</div>
-            <h2>{titulo}</h2>
+            <img class="logo" src="{logo_url}" onerror="this.style.display='none'">
+            <div class="cabecalho">
+                <h1>{config.get("escola_nome", "")}</h1>
+                <div>{config.get("escola_endereco", "")}</div>
+                <h2>{titulo}</h2>
+            </div>
         </div>
         <table><thead><tr>{head}</tr></thead><tbody>{tabela}</tbody></table>
         <div class="rodape">

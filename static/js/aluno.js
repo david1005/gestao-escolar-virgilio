@@ -102,6 +102,7 @@ async function excluirAnexoAluno(id) {
 function gerarRelatorio() {
     if (!dadosAluno) return;
     const { aluno, resumo, ocorrencias, registros } = dadosAluno;
+    const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const linhasRegistros = registros.map(r =>
         `<tr><td>${r.data}</td><td>${r.tipo}</td><td>${r.aula}ª aula</td><td>${r.motivo}</td></tr>`
@@ -117,8 +118,12 @@ function gerarRelatorio() {
             <meta charset="UTF-8">
             <style>
                 body { font-family: Arial, sans-serif; padding: 40px; color: #222; }
-                h2 { text-align: center; margin-bottom: 4px; }
-                h3 { text-align: center; color: #555; margin-top: 0; }
+                .topo { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #ccc; padding-bottom: 14px; margin-bottom: 20px; }
+                .logo { width: 78px; height: 78px; object-fit: contain; }
+                .cabecalho { flex: 1; text-align: center; }
+                h2 { margin: 0 0 4px; }
+                h3 { color: #555; margin-top: 0; }
+                .topo + h2, .topo + h2 + h3, .topo + h2 + h3 + .linha { display: none; }
                 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
                 th { background: #f0f0f0; padding: 8px; text-align: left; font-size: 13px; }
                 td { padding: 7px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
@@ -131,6 +136,13 @@ function gerarRelatorio() {
             </style>
         </head>
         <body>
+            <div class="topo">
+                <img class="logo" src="${logoUrl}" onerror="this.style.display='none'">
+                <div class="cabecalho">
+                    <h2>EEEP Governador Virgilio Tavora</h2>
+                    <h3>Relatorio Individual do Aluno</h3>
+                </div>
+            </div>
             <h2>Escola Virgílio Távora</h2>
             <h3>Relatório Individual do Aluno</h3>
             <div class="linha"></div>
