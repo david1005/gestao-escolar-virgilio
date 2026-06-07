@@ -177,13 +177,13 @@ O sistema deve exportar alunos filtrados em arquivo CSV.
 
 ### RF20 - Virada de ano
 
-O sistema deve promover alunos ativos do 1o para o 2o ano, do 2o para o 3o ano e marcar alunos do 3o ano como concluidos.
+O sistema deve permitir que o administrador execute a virada de ano pela tela Configuracoes > Ano letivo. A virada encerra o ano letivo atual, cria e ativa automaticamente o proximo ano letivo quando ele ainda nao existir, permite definir as datas de inicio e fim do novo ano, promove alunos ativos do 1o para o 2o ano, do 2o para o 3o ano e marca alunos do 3o ano como concluidos.
 
 Na virada de ano, as turmas cadastradas representam a estrutura fixa da escola. Assim, os alunos mudam de turma, mas a turma em si permanece cadastrada. Exemplo: alunos do 1o B de Informatica passam para o 2o B de Informatica; alunos do 2o B passam para o 3o B; alunos do 3o B ficam com status concluido; o 1o B fica vazio para receber novos alunos.
 
 ### RF21 - Previa da virada de ano
 
-Antes da virada, o sistema deve mostrar uma previa com quantidade de alunos promovidos, concluidos e sem destino.
+Antes da virada, o sistema deve mostrar uma previa com ano letivo atual, proximo ano letivo, indicacao se o proximo ano sera criado automaticamente, campos de data do proximo ano letivo, quantidade de alunos promovidos, concluidos, alunos sem destino e detalhamento por turma de origem e destino.
 
 ### RF22 - Registro de atraso
 
@@ -513,16 +513,15 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["Admin solicita previa"] --> B["Sistema conta alunos ativos por ano"]
-    B --> C["Sistema verifica turmas destino"]
-    C --> D["Admin confirma digitando VIRADA"]
-    D --> E{"Aluno esta no 3o ano?"}
-    E -- "Sim" --> F["Marca como concluido"]
-    E -- "Nao" --> G{"Existe turma destino?"}
-    G -- "Sim" --> H["Promove para proximo ano"]
-    G -- "Nao" --> I["Mantem aluno sem alteracao"]
-    F --> J["Registra auditoria"]
-    H --> J
+    A["Admin acessa Configuracoes > Ano letivo"] --> B["Abre Virada de Ano Letivo"]
+    B --> C["Sistema mostra ano ativo, totais e movimentos por turma"]
+    C --> D{"Existe turma sem destino?"}
+    D -- "Sim" --> E["Sistema bloqueia a confirmacao"]
+    D -- "Nao" --> F["Admin digita VIRADA"]
+    F --> G{"Aluno esta no 3o ano?"}
+    G -- "Sim" --> H["Marca como concluido"]
+    G -- "Nao" --> I["Promove para proximo ano"]
+    H --> J["Registra auditoria"]
     I --> J
 ```
 
@@ -731,7 +730,7 @@ erDiagram
 
 ### 13.1 Modulo Alunos
 
-Responsavel pelo cadastro, consulta, edicao, exclusao logica por status, importacao com pre-visualizacao, exportacao, historico individual, linha do tempo e virada de ano.
+Responsavel pelo cadastro, consulta, edicao, exclusao logica por status, importacao com pre-visualizacao, exportacao, historico individual e linha do tempo.
 
 ### 13.2 Modulo Registros
 
@@ -751,7 +750,7 @@ Responsavel pelo cadastro e manutencao de usuarios, perfis, vinculo a turma ou c
 
 ### 13.6 Modulo Configuracoes
 
-Responsavel por dados da escola, ano letivo, cursos, turmas, listas operacionais, permissoes, relatorios, backups do banco, backup dos anexos, anexos e auditoria.
+Responsavel por dados da escola, ano letivo, virada de ano letivo, cursos, turmas, listas operacionais, permissoes, relatorios, backups do banco, backup dos anexos, anexos e auditoria.
 
 ## 14. Principais rotas
 

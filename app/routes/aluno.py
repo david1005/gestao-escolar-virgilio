@@ -11,7 +11,7 @@ from app.models.aluno import Aluno, Curso, Turma
 from app.models.auditoria import Auditoria
 from app.models.ocorrencia import Ocorrencia
 from app.models.registro import Registro
-from app.models.sistema import MatriculaHistorico
+from app.models.sistema import AnoLetivo, MatriculaHistorico
 from app.models.usuario import Usuario
 from app.schemas import aluno as schemas
 from app.schemas.aluno import AlunoCreate, AlunoUpdate, CursoCreate, TurmaCreate
@@ -153,26 +153,90 @@ def analisar_linhas_importacao(db: Session, leitor, turma_importacao: Turma | No
 def calcular_previa_virada(db: Session):
     turmas = db.query(Turma).all()
     alunos = db.query(Aluno).filter(Aluno.status == "ativo").all()
+    cursos = {curso.id: curso for curso in db.query(Curso).all()}
     turmas_por_id = {turma.id: turma for turma in turmas}
-    destinos = {(turma.ano, turma.letra, turma.curso_id) for turma in turmas}
+    destinos = {(turma.ano, turma.letra, turma.curso_id): turma for turma in turmas}
     por_ano = {1: 0, 2: 0, 3: 0}
     sem_destino = 0
+    alunos_por_turma = {}
+
+    def label_turma(turma: Turma | None):
+        if not turma:
+            return "Sem turma"
+        curso = cursos.get(turma.curso_id)
+        return f"{turma.ano}º {turma.letra} - {curso.nome if curso else ''}"
 
     for aluno in alunos:
         turma = turmas_por_id.get(aluno.turma_id)
         if not turma:
             sem_destino += 1
+            alunos_por_turma.setdefault(None, 0)
+            alunos_por_turma[None] += 1
             continue
 
         por_ano[turma.ano] = por_ano.get(turma.ano, 0) + 1
+        alunos_por_turma[turma.id] = alunos_por_turma.get(turma.id, 0) + 1
         if turma.ano in [1, 2] and (turma.ano + 1, turma.letra, turma.curso_id) not in destinos:
             sem_destino += 1
 
+    movimentos = []
+    for turma_id, total in sorted(
+        alunos_por_turma.items(),
+        key=lambda item: (
+            99 if item[0] is None else turmas_por_id[item[0]].ano,
+            "" if item[0] is None else turmas_por_id[item[0]].letra,
+        ),
+    ):
+        turma = turmas_por_id.get(turma_id) if turma_id is not None else None
+        if not turma:
+            movimentos.append({
+                "origem": "Sem turma",
+                "destino": "-",
+                "total": total,
+                "resultado": "Sem turma de origem",
+                "status": "erro",
+            })
+            continue
+
+        if turma.ano == 3:
+            movimentos.append({
+                "origem": label_turma(turma),
+                "destino": "Concluido",
+                "total": total,
+                "resultado": "Alunos serao marcados como concluidos",
+                "status": "concluir",
+            })
+            continue
+
+        destino = destinos.get((turma.ano + 1, turma.letra, turma.curso_id))
+        movimentos.append({
+            "origem": label_turma(turma),
+            "destino": label_turma(destino) if destino else "Turma de destino nao encontrada",
+            "total": total,
+            "resultado": "Promocao preparada" if destino else "Crie a turma de destino antes da virada",
+            "status": "promover" if destino else "erro",
+        })
+
+    ano_letivo = obter_ano_letivo_ativo(db)
+    proximo_ano = db.query(AnoLetivo).filter(AnoLetivo.ano == ano_letivo.ano + 1).first()
     return {
+        "ano_letivo": {
+            "id": ano_letivo.id,
+            "nome": ano_letivo.nome,
+            "ano": ano_letivo.ano,
+        },
+        "proximo_ano_letivo": {
+            "id": proximo_ano.id if proximo_ano else None,
+            "nome": proximo_ano.nome if proximo_ano else f"Ano Letivo {ano_letivo.ano + 1}",
+            "ano": ano_letivo.ano + 1,
+            "sera_criado": proximo_ano is None,
+            "encerrado": bool(proximo_ano.encerrado) if proximo_ano else False,
+        },
         "primeiro_para_segundo": por_ano.get(1, 0),
         "segundo_para_terceiro": por_ano.get(2, 0),
         "terceiro_concluido": por_ano.get(3, 0),
         "sem_destino": sem_destino,
+        "movimentos": movimentos,
     }
 
 
@@ -372,13 +436,43 @@ def previa_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depends(
 
 
 @router.post("/alunos/virada-ano")
-def realizar_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+def realizar_virada_ano(
+    proximo_inicio: date | None = Form(None),
+    proximo_fim: date | None = Form(None),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_atual),
+):
     exigir_alunos(db, usuario)
     if usuario.perfil != "admin":
         raise HTTPException(status_code=403, detail="Acesso negado")
 
-    ano_letivo = obter_ano_letivo_ativo(db)
-    preencher_ano_letivo_em_historico(db, ano_letivo.id)
+    ano_letivo_atual = obter_ano_letivo_ativo(db)
+    preencher_ano_letivo_em_historico(db, ano_letivo_atual.id)
+
+    proximo_ano = db.query(AnoLetivo).filter(AnoLetivo.ano == ano_letivo_atual.ano + 1).first()
+    criou_proximo_ano = False
+    if proximo_ano and proximo_ano.encerrado:
+        raise HTTPException(status_code=400, detail="O proximo ano letivo ja existe, mas esta encerrado")
+    if not proximo_ano:
+        proximo_numero = ano_letivo_atual.ano + 1
+        proximo_ano = AnoLetivo(
+            nome=f"Ano Letivo {proximo_numero}",
+            ano=proximo_numero,
+            data_inicio=proximo_inicio or date(proximo_numero, 2, 1),
+            data_fim=proximo_fim or date(proximo_numero, 12, 31),
+            ativo=True,
+        )
+        db.add(proximo_ano)
+        db.flush()
+        criou_proximo_ano = True
+    elif proximo_inicio and proximo_fim:
+        proximo_ano.data_inicio = proximo_inicio
+        proximo_ano.data_fim = proximo_fim
+
+    ano_letivo_atual.encerrado = True
+    ano_letivo_atual.ativo = False
+    proximo_ano.ativo = True
+    proximo_ano.encerrado = False
 
     turmas = db.query(Turma).all()
     turmas_por_id = {turma.id: turma for turma in turmas}
@@ -395,21 +489,31 @@ def realizar_virada_ano(db: Session = Depends(get_db), usuario: Usuario = Depend
 
         if turma_atual.ano == 3:
             aluno.status = "concluido"
-            registrar_matricula_historico(db, aluno, ano_letivo.id, "concluido")
+            registrar_matricula_historico(db, aluno, ano_letivo_atual.id, "concluido")
             concluidos += 1
             continue
 
         destino_id = proxima_turma.get((turma_atual.ano + 1, turma_atual.letra, turma_atual.curso_id))
         if destino_id:
             aluno.turma_id = destino_id
-            aluno.ano_letivo_id = ano_letivo.id
-            registrar_matricula_historico(db, aluno, ano_letivo.id, aluno.status)
+            aluno.ano_letivo_id = proximo_ano.id
+            registrar_matricula_historico(db, aluno, proximo_ano.id, aluno.status)
             promovidos += 1
 
-    registrar_auditoria(db, usuario, "virada_ano", "aluno", None, f"ano_letivo={ano_letivo.nome}; promovidos={promovidos}; concluidos={concluidos}")
+    registrar_auditoria(
+        db,
+        usuario,
+        "virada_ano",
+        "aluno",
+        None,
+        f"origem={ano_letivo_atual.nome}; destino={proximo_ano.nome}; promovidos={promovidos}; concluidos={concluidos}",
+    )
     db.commit()
     return {
         "mensagem": "Virada de ano letivo realizada com sucesso",
+        "ano_origem": ano_letivo_atual.nome,
+        "ano_destino": proximo_ano.nome,
+        "proximo_ano_criado": criou_proximo_ano,
         "promovidos": promovidos,
         "concluidos": concluidos,
     }

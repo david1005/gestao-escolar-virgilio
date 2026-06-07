@@ -127,6 +127,120 @@ function renderAnos(anos) {
     }).join('');
 }
 
+function classeStatusVirada(status) {
+    if (status === 'erro') return 'bg-danger';
+    if (status === 'concluir') return 'bg-secondary';
+    return 'bg-success';
+}
+
+async function abrirViradaAnoLetivo() {
+    const modalEl = document.getElementById('modalViradaAno');
+    if (!modalEl) return;
+
+    document.getElementById('viradaAnoAtivo').textContent = 'Carregando...';
+    document.getElementById('viradaProximoAno').textContent = '-';
+    document.getElementById('viradaProximoStatus').textContent = '-';
+    document.getElementById('viradaProximoInicio').value = '';
+    document.getElementById('viradaProximoFim').value = '';
+    document.getElementById('viradaPrimeiro').textContent = '0';
+    document.getElementById('viradaSegundo').textContent = '0';
+    document.getElementById('viradaTerceiro').textContent = '0';
+    document.getElementById('viradaConfirmacao').value = '';
+    document.getElementById('btnExecutarVirada').disabled = true;
+    document.getElementById('viradaAvisoDestino').classList.add('d-none');
+    document.getElementById('viradaTabelaMovimentos').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Carregando previa...</td></tr>';
+
+    new bootstrap.Modal(modalEl).show();
+
+    try {
+        const resposta = await fetch('/api/alunos/virada-ano/previa');
+        const previa = await resposta.json();
+        if (!resposta.ok) {
+            alert(previa.detail || 'Erro ao carregar previa da virada.');
+            return;
+        }
+        renderViradaAnoLetivo(previa);
+    } catch (error) {
+        console.error('Erro ao carregar previa da virada:', error);
+        alert('Erro ao carregar previa da virada.');
+    }
+}
+
+function renderViradaAnoLetivo(previa) {
+    window.previaViradaAno = previa;
+    document.getElementById('viradaAnoAtivo').textContent = previa.ano_letivo?.nome || '-';
+    document.getElementById('viradaProximoAno').textContent = previa.proximo_ano_letivo?.nome || '-';
+    document.getElementById('viradaProximoStatus').textContent = previa.proximo_ano_letivo?.sera_criado
+        ? 'Será criado automaticamente'
+        : 'Já cadastrado no sistema';
+    document.getElementById('viradaPrimeiro').textContent = previa.primeiro_para_segundo || 0;
+    document.getElementById('viradaSegundo').textContent = previa.segundo_para_terceiro || 0;
+    document.getElementById('viradaTerceiro').textContent = previa.terceiro_concluido || 0;
+
+    const proximoAno = previa.proximo_ano_letivo?.ano || new Date().getFullYear() + 1;
+    document.getElementById('viradaProximoInicio').value = `${proximoAno}-02-01`;
+    document.getElementById('viradaProximoFim').value = `${proximoAno}-12-31`;
+
+    const movimentos = previa.movimentos || [];
+    document.getElementById('viradaTabelaMovimentos').innerHTML = movimentos.map(item => `
+        <tr>
+            <td>${textoSeguro(item.origem)}</td>
+            <td>${textoSeguro(item.destino)}</td>
+            <td>${item.total}</td>
+            <td><span class="badge ${classeStatusVirada(item.status)}">${textoSeguro(item.resultado)}</span></td>
+        </tr>
+    `).join('') || '<tr><td colspan="4" class="text-center text-muted">Nenhum aluno ativo para movimentar.</td></tr>';
+
+    const proximoEncerrado = Boolean(previa.proximo_ano_letivo?.encerrado);
+    const temErro = movimentos.some(item => item.status === 'erro') || (previa.sem_destino || 0) > 0 || proximoEncerrado;
+    if (proximoEncerrado) {
+        document.getElementById('viradaAvisoDestino').textContent = 'O próximo ano letivo existe, mas está encerrado. Reabra ou crie outro ano antes da virada.';
+    } else {
+        document.getElementById('viradaAvisoDestino').textContent = 'Existem alunos sem turma de destino. Crie as turmas faltantes antes de executar a virada.';
+    }
+    document.getElementById('viradaAvisoDestino').classList.toggle('d-none', !temErro);
+    validarConfirmacaoVirada();
+}
+
+function validarConfirmacaoVirada() {
+    const campo = document.getElementById('viradaConfirmacao');
+    const botao = document.getElementById('btnExecutarVirada');
+    const previa = window.previaViradaAno || {};
+    const movimentos = previa.movimentos || [];
+    const inicio = document.getElementById('viradaProximoInicio').value;
+    const fim = document.getElementById('viradaProximoFim').value;
+    const temErro = movimentos.some(item => item.status === 'erro') || (previa.sem_destino || 0) > 0 || Boolean(previa.proximo_ano_letivo?.encerrado);
+    botao.disabled = campo.value.trim().toUpperCase() !== 'VIRADA' || temErro || !inicio || !fim || inicio > fim;
+}
+
+async function executarViradaAnoLetivo() {
+    if (document.getElementById('btnExecutarVirada').disabled) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('proximo_inicio', document.getElementById('viradaProximoInicio').value);
+        formData.append('proximo_fim', document.getElementById('viradaProximoFim').value);
+
+        const resposta = await fetch('/api/alunos/virada-ano', {
+            method: 'POST',
+            body: formData
+        });
+        const resultado = await resposta.json();
+
+        if (!resposta.ok) {
+            alert(resultado.detail || 'Erro ao realizar virada de ano.');
+            return;
+        }
+
+        alert(`${resultado.mensagem}\nAno origem: ${resultado.ano_origem}\nAno destino: ${resultado.ano_destino}\nPromovidos: ${resultado.promovidos}\nConcluidos: ${resultado.concluidos}`);
+        bootstrap.Modal.getInstance(document.getElementById('modalViradaAno'))?.hide();
+        carregarTudo();
+    } catch (error) {
+        console.error('Erro na virada de ano:', error);
+        alert('Erro ao realizar virada de ano.');
+    }
+}
+
 async function criarAnoLetivo() {
     const dados = {
         nome: document.getElementById('anoNome').value,
