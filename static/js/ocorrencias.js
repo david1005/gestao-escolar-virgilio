@@ -2,7 +2,9 @@ let alunos = [];
 let turmas = [];
 let cursos = [];
 let ocorrencias = [];
+let ocorrenciasFiltradas = [];
 let ocorrenciaEditandoId = null;
+let paginaAtualOcorrencias = 1;
 let tiposOcorrencia = [];
 let medidasOcorrencia = [];
 
@@ -60,7 +62,9 @@ async function carregarDados() {
     document.getElementById('data').valueAsDate = new Date();
     preencherFiltroTurmas();
     renderizarResumo();
-    renderizarOcorrencias(ocorrencias);
+    ocorrenciasFiltradas = ocorrencias;
+    paginaAtualOcorrencias = 1;
+    renderizarOcorrencias(ocorrenciasFiltradas);
 }
 
 function normalizarTexto(texto) {
@@ -143,10 +147,17 @@ function renderizarOcorrencias(lista) {
 
     if (lista.length === 0) {
         tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Nenhuma ocorrencia encontrada.</td></tr>';
+        atualizarInfoPaginacaoOcorrencias(0, 1);
         return;
     }
 
-    tbody.innerHTML = lista.map(o => {
+    const porPagina = parseInt(document.getElementById('itensPorPagina')?.value || '25');
+    const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+    paginaAtualOcorrencias = Math.min(paginaAtualOcorrencias, totalPaginas);
+    const inicio = (paginaAtualOcorrencias - 1) * porPagina;
+    const listaPagina = lista.slice(inicio, inicio + porPagina);
+
+    tbody.innerHTML = listaPagina.map(o => {
         const notificado = o.responsavel_notificado
             ? '<i class="bi bi-check-circle-fill text-success"></i>'
             : '<i class="bi bi-x-circle-fill text-danger"></i>';
@@ -189,6 +200,23 @@ function renderizarOcorrencias(lista) {
             </tr>
         `;
     }).join('');
+
+    atualizarInfoPaginacaoOcorrencias(lista.length, totalPaginas);
+}
+
+function atualizarInfoPaginacaoOcorrencias(total, totalPaginas) {
+    const porPagina = parseInt(document.getElementById('itensPorPagina')?.value || '25');
+    const inicio = total === 0 ? 0 : (paginaAtualOcorrencias - 1) * porPagina + 1;
+    const fim = Math.min(total, paginaAtualOcorrencias * porPagina);
+    document.getElementById('infoPaginacaoOcorrencias').textContent = `${inicio}-${fim} de ${total} ocorrencias encontradas`;
+    document.getElementById('paginaAtualOcorrencias').textContent = `${paginaAtualOcorrencias}/${totalPaginas}`;
+}
+
+function mudarPaginaOcorrencias(direcao) {
+    const porPagina = parseInt(document.getElementById('itensPorPagina')?.value || '25');
+    const totalPaginas = Math.max(1, Math.ceil(ocorrenciasFiltradas.length / porPagina));
+    paginaAtualOcorrencias = Math.min(Math.max(1, paginaAtualOcorrencias + direcao), totalPaginas);
+    renderizarOcorrencias(ocorrenciasFiltradas);
 }
 
 function montarItemAluno(aluno, origem) {
@@ -538,7 +566,7 @@ function filtrar() {
     const status = document.getElementById('filtroStatus').value;
     const data = document.getElementById('filtroData').value;
 
-    const lista = ocorrencias.filter(o => {
+    ocorrenciasFiltradas = ocorrencias.filter(o => {
         const aluno = getAluno(o.aluno_id);
         const nomeAluno = normalizarTexto(getNomeAluno(o.aluno_id));
         return (
@@ -551,7 +579,8 @@ function filtrar() {
         );
     });
 
-    renderizarOcorrencias(lista);
+    paginaAtualOcorrencias = 1;
+    renderizarOcorrencias(ocorrenciasFiltradas);
 }
 
 document.getElementById('filtroNome').addEventListener('input', filtrar);
@@ -560,5 +589,9 @@ document.getElementById('filtroTipo').addEventListener('change', filtrar);
 document.getElementById('filtroGravidade').addEventListener('change', filtrar);
 document.getElementById('filtroStatus').addEventListener('change', filtrar);
 document.getElementById('filtroData').addEventListener('change', filtrar);
+document.getElementById('itensPorPagina').addEventListener('change', () => {
+    paginaAtualOcorrencias = 1;
+    renderizarOcorrencias(ocorrenciasFiltradas);
+});
 
 carregarDados();

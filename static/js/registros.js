@@ -2,7 +2,9 @@ let alunos = [];
 let turmas = [];
 let cursos = [];
 let registros = [];
+let registrosFiltrados = [];
 let registroEditandoId = null;
+let paginaAtualRegistros = 1;
 
 const motivosPorTipo = {
     'Atraso': [
@@ -87,7 +89,9 @@ async function carregarDados() {
     preencherFiltroTurmas();
     atualizarListaMotivos();
     renderizarResumoRegistros();
-    renderizarRegistros(registros);
+    registrosFiltrados = registros;
+    paginaAtualRegistros = 1;
+    renderizarRegistros(registrosFiltrados);
 }
 
 function preencherFiltroTurmas() {
@@ -178,10 +182,17 @@ function renderizarRegistros(lista) {
 
     if (lista.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Nenhum registro encontrado.</td></tr>';
+        atualizarInfoPaginacaoRegistros(0, 1);
         return;
     }
 
-    tbody.innerHTML = lista.map(r => {
+    const porPagina = parseInt(document.getElementById('itensPorPagina')?.value || '25');
+    const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+    paginaAtualRegistros = Math.min(paginaAtualRegistros, totalPaginas);
+    const inicio = (paginaAtualRegistros - 1) * porPagina;
+    const listaPagina = lista.slice(inicio, inicio + porPagina);
+
+    tbody.innerHTML = listaPagina.map(r => {
         const badgeTipo = r.tipo === 'Atraso'
             ? '<span class="badge bg-warning text-dark">Atraso</span>'
             : '<span class="badge bg-danger">Saída antecipada</span>';
@@ -218,6 +229,23 @@ function renderizarRegistros(lista) {
             </tr>
         `;
     }).join('');
+
+    atualizarInfoPaginacaoRegistros(lista.length, totalPaginas);
+}
+
+function atualizarInfoPaginacaoRegistros(total, totalPaginas) {
+    const porPagina = parseInt(document.getElementById('itensPorPagina')?.value || '25');
+    const inicio = total === 0 ? 0 : (paginaAtualRegistros - 1) * porPagina + 1;
+    const fim = Math.min(total, paginaAtualRegistros * porPagina);
+    document.getElementById('infoPaginacaoRegistros').textContent = `${inicio}-${fim} de ${total} registros encontrados`;
+    document.getElementById('paginaAtualRegistros').textContent = `${paginaAtualRegistros}/${totalPaginas}`;
+}
+
+function mudarPaginaRegistros(direcao) {
+    const porPagina = parseInt(document.getElementById('itensPorPagina')?.value || '25');
+    const totalPaginas = Math.max(1, Math.ceil(registrosFiltrados.length / porPagina));
+    paginaAtualRegistros = Math.min(Math.max(1, paginaAtualRegistros + direcao), totalPaginas);
+    renderizarRegistros(registrosFiltrados);
 }
 
 document.getElementById('buscaAluno').addEventListener('input', function () {
@@ -355,11 +383,11 @@ function imprimirAutorizacao(id) {
     const data = new Date(`${registro.data}T00:00:00`).toLocaleDateString('pt-BR');
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const tipoSaida = registro.tipo !== 'Atraso';
-    const titulo = tipoSaida ? 'AUTORIZACAO DE SAIDA' : 'AUTORIZACAO DE ENTRADA';
+    const titulo = tipoSaida ? 'AUTORIZAÇÃO DE SAIDA' : 'AUTORIZAÇÃO DE ENTRADA';
     const textoPrincipal = tipoSaida
         ? 'Aluno autorizado a sair antecipadamente da escola.'
-        : 'Aluno autorizado a entrar em sala apos passar pela secretaria.';
-    const destinatario = tipoSaida ? 'Entregar ao vigilante' : 'Entregar ao professor';
+        : 'Aluno autorizado a entrar em sala após passar pela secretaria.';
+    const destinatario = tipoSaida ? 'Entregar ao vigilante/Porteiro' : 'Entregar ao professor';
     const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const janela = window.open('', '_blank', 'width=420,height=640');
@@ -398,7 +426,7 @@ function imprimirAutorizacao(id) {
             <div class="ticket">
                 <div class="center">
                     <img class="logo" src="${logoUrl}" onerror="this.style.display='none'">
-                    <div><strong>EEEP GOVERNADOR VIRGILIO TAVORA</strong></div>
+                    <div><strong>EEEP GOVERNADOR VIRGÍLIO TÁVORA</strong></div>
                     <div class="titulo">${titulo}</div>
                     <div class="subtitulo">${destinatario}</div>
                 </div>
@@ -411,13 +439,13 @@ function imprimirAutorizacao(id) {
                 <div class="campo"><strong>Tipo:</strong> ${registro.tipo}</div>
                 <div class="campo"><strong>Aula:</strong> ${registro.aula}ª aula</div>
                 <div class="campo"><strong>Motivo:</strong> ${registro.motivo}</div>
-                <div class="campo"><strong>Documento:</strong> ${registro.tem_documento ? 'Sim' : 'Nao'}</div>
+                <div class="campo"><strong>Documento:</strong> ${registro.tem_documento ? 'Sim' : 'Não'}</div>
                 ${registro.observacoes ? `<div class="campo"><strong>Obs.:</strong> ${registro.observacoes}</div>` : ''}
                 <div class="linha"></div>
                 <div class="texto">${textoPrincipal}</div>
                 <div class="assinatura">
                     <div class="risco"></div>
-                    Secretaria / Coordenacao
+                    Secretaria / Coordenação
                 </div>
                 <div class="center rodape">Impresso em ${new Date().toLocaleString('pt-BR')}</div>
             </div>
@@ -437,6 +465,10 @@ document.getElementById('filtroTurma').addEventListener('change', filtrar);
 document.getElementById('filtroTipo').addEventListener('change', filtrar);
 document.getElementById('filtroData').addEventListener('change', filtrar);
 document.getElementById('filtroMes').addEventListener('change', filtrar);
+document.getElementById('itensPorPagina').addEventListener('change', () => {
+    paginaAtualRegistros = 1;
+    renderizarRegistros(registrosFiltrados);
+});
 document.getElementById('tipo').addEventListener('change', atualizarListaMotivos);
 
 function filtrar() {
@@ -446,7 +478,7 @@ function filtrar() {
     const data = document.getElementById('filtroData').value;
     const mes = document.getElementById('filtroMes').value;
 
-    let lista = registros.filter(r => {
+    registrosFiltrados = registros.filter(r => {
         const nomeAluno = getNomeAluno(r.aluno_id).toLowerCase();
         const aluno = alunos.find(a => a.id === r.aluno_id);
         const mesDado = r.data.substring(5, 7);
@@ -459,7 +491,8 @@ function filtrar() {
         );
     });
 
-    renderizarRegistros(lista);
+    paginaAtualRegistros = 1;
+    renderizarRegistros(registrosFiltrados);
 }
 
 carregarDados();
