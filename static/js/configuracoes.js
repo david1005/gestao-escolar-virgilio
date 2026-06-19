@@ -569,9 +569,24 @@ function renderBackups(lista) {
     }).join('');
 }
 
-async function gerarBackup() {
-    if (!confirm('Gerar backup do banco agora?')) return;
-    const res = await fetch('/api/sistema/backups', { method: 'POST' });
+async function gerarBackupSelecionado() {
+    const tipo = document.getElementById('backupTipo').value;
+    if (tipo === 'anexos') {
+        await gerarBackupAnexos();
+        return;
+    }
+    await gerarBackup(tipo);
+}
+
+async function gerarBackup(tipo = 'auto') {
+    const textoTipo = {
+        auto: 'automatico recomendado',
+        sql: 'Banco completo SQL',
+        json: 'Dados do sistema JSON'
+    }[tipo] || 'backup';
+    if (!confirm(`Gerar backup ${textoTipo} agora?`)) return;
+
+    const res = await fetch(`/api/sistema/backups?tipo=${encodeURIComponent(tipo)}`, { method: 'POST' });
     if (res.ok) {
         const backup = await res.json();
         alert(`Backup gerado: ${backup.nome}`);
@@ -596,8 +611,10 @@ async function gerarBackupAnexos() {
 }
 
 async function restaurarBackup(nome) {
-    const confirmacao = prompt(`Restaurar o backup ${nome}?\n\nDigite RESTAURAR para confirmar.`);
-    if (confirmacao !== 'RESTAURAR') return;
+    const ehSql = nome.toLowerCase().endsWith('.sql');
+    const textoConfirmacao = ehSql ? 'RESTAURAR SQL' : 'RESTAURAR';
+    const confirmacao = prompt(`Restaurar o backup ${nome}?\n\nDigite ${textoConfirmacao} para confirmar.`);
+    if (confirmacao !== textoConfirmacao) return;
     const res = await fetch(`/api/sistema/backups/${encodeURIComponent(nome)}/restaurar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -610,6 +627,45 @@ async function restaurarBackup(nome) {
         const erro = await res.json().catch(() => ({}));
         alert(erro.detail || 'Erro ao restaurar backup.');
     }
+}
+
+async function restaurarBackupUpload() {
+    const arquivo = document.getElementById('arquivoRestauracao').files[0];
+    if (!arquivo) {
+        alert('Selecione um arquivo .json ou .sql para restaurar.');
+        return;
+    }
+
+    const ehSql = arquivo.name.toLowerCase().endsWith('.sql');
+    const ehJson = arquivo.name.toLowerCase().endsWith('.json');
+    if (!ehSql && !ehJson) {
+        alert('Envie apenas arquivo .json ou .sql.');
+        return;
+    }
+
+    const textoConfirmacao = ehSql ? 'RESTAURAR SQL' : 'RESTAURAR';
+    const confirmacao = prompt(`Restaurar o arquivo ${arquivo.name}?\n\nEssa acao pode substituir dados do sistema.\nDigite ${textoConfirmacao} para confirmar.`);
+    if (confirmacao !== textoConfirmacao) return;
+
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    formData.append('confirmacao', confirmacao);
+
+    const res = await fetch('/api/sistema/backups/restaurar-upload', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (res.ok) {
+        const resultado = await res.json();
+        alert(resultado.mensagem || 'Backup restaurado com sucesso.');
+        document.getElementById('arquivoRestauracao').value = '';
+        carregarTudo();
+        return;
+    }
+
+    const erro = await res.json().catch(() => ({}));
+    alert(erro.detail || 'Erro ao restaurar backup.');
 }
 
 function renderAnexos(lista) {

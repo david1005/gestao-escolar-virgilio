@@ -94,6 +94,20 @@ def localizar_pg_dump():
     return next((c for c in candidatos if Path(c).exists()), None)
 
 
+def localizar_psql():
+    encontrado = shutil.which("psql")
+    if encontrado:
+        return encontrado
+    candidatos = [
+        r"C:\Program Files\PostgreSQL\17\bin\psql.exe",
+        r"C:\Program Files\PostgreSQL\16\bin\psql.exe",
+        r"C:\Program Files\PostgreSQL\15\bin\psql.exe",
+        r"C:\Program Files\PostgreSQL\14\bin\psql.exe",
+        r"C:\Program Files\PostgreSQL\13\bin\psql.exe",
+    ]
+    return next((c for c in candidatos if Path(c).exists()), None)
+
+
 def database_url():
     from app.database import DATABASE_URL
     return DATABASE_URL
@@ -187,6 +201,73 @@ def caminho_backup_seguro(nome: str):
     if not caminho.exists() or caminho.parent != pasta_backup:
         raise HTTPException(status_code=404, detail="Backup nao encontrado")
     return caminho
+
+
+def gerar_backup_json(db: Session, destino: Path):
+    dados = {
+        "gerado_em": datetime.now().isoformat(),
+        "anos_letivos": [vars(a) for a in db.query(AnoLetivo).all()],
+        "alunos": [vars(a) for a in db.query(Aluno).all()],
+        "cursos": [vars(c) for c in db.query(Curso).all()],
+        "turmas": [vars(t) for t in db.query(Turma).all()],
+        "registros": [vars(r) for r in db.query(Registro).all()],
+        "ocorrencias": [vars(o) for o in db.query(Ocorrencia).all()],
+        "matriculas_historico": [vars(m) for m in db.query(MatriculaHistorico).all()],
+        "usuarios": [
+            {k: v for k, v in vars(u).items() if k != "senha_hash"}
+            for u in db.query(Usuario).all()
+        ],
+    }
+    for lista in dados.values():
+        if isinstance(lista, list):
+            for item in lista:
+                item.pop("_sa_instance_state", None)
+    destino.write_text(json.dumps(dados, default=str, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def gerar_backup_sql(destino: Path):
+    pg_dump = localizar_pg_dump()
+    if not pg_dump:
+        raise HTTPException(status_code=500, detail="pg_dump nao encontrado neste servidor. Gere backup JSON ou instale as ferramentas do PostgreSQL.")
+
+    url = urlparse(database_url())
+    env = os.environ.copy()
+    env["PGPASSWORD"] = url.password or ""
+    comando = [
+        pg_dump,
+        "-h", url.hostname or "localhost",
+        "-p", str(url.port or 5432),
+        "-U", url.username or "postgres",
+        "-d", (url.path or "").lstrip("/"),
+        "-f", str(destino),
+        "--clean",
+        "--if-exists",
+    ]
+    resultado = subprocess.run(comando, env=env, capture_output=True, text=True)
+    if resultado.returncode != 0:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar backup SQL: {resultado.stderr}")
+
+
+def restaurar_backup_sql(caminho: Path):
+    psql = localizar_psql()
+    if not psql:
+        raise HTTPException(status_code=500, detail="psql nao encontrado neste servidor. Restaure este SQL pelo painel do banco ou instale as ferramentas do PostgreSQL.")
+
+    url = urlparse(database_url())
+    env = os.environ.copy()
+    env["PGPASSWORD"] = url.password or ""
+    comando = [
+        psql,
+        "-h", url.hostname or "localhost",
+        "-p", str(url.port or 5432),
+        "-U", url.username or "postgres",
+        "-d", (url.path or "").lstrip("/"),
+        "-v", "ON_ERROR_STOP=1",
+        "-f", str(caminho),
+    ]
+    resultado = subprocess.run(comando, env=env, capture_output=True, text=True)
+    if resultado.returncode != 0:
+        raise HTTPException(status_code=500, detail=f"Erro ao restaurar backup SQL: {resultado.stderr}")
 
 
 def caminho_anexo_seguro(anexo: Anexo):
@@ -381,51 +462,27 @@ def listar_backups(db: Session = Depends(get_db), usuario: Usuario = Depends(get
 
 
 @router.post("/sistema/backups")
-def gerar_backup(request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+async def gerar_backup(request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_admin(usuario)
+    tipo = request.query_params.get("tipo")
+    if not tipo:
+        form = await request.form()
+        tipo = str(form.get("tipo") or "auto")
     agora = datetime.now().strftime("%Y%m%d_%H%M%S")
-    pg_dump = localizar_pg_dump()
+    tipo = (tipo or "auto").lower()
+    if tipo not in ["auto", "sql", "json"]:
+        raise HTTPException(status_code=400, detail="Tipo de backup invalido")
 
-    if pg_dump:
-        url = urlparse(database_url())
+    if tipo == "sql" or (tipo == "auto" and localizar_pg_dump()):
         nome = f"backup_{agora}.sql"
         destino = BACKUP_DIR / nome
-        env = os.environ.copy()
-        env["PGPASSWORD"] = url.password or ""
-        comando = [
-            pg_dump,
-            "-h", url.hostname or "localhost",
-            "-p", str(url.port or 5432),
-            "-U", url.username or "postgres",
-            "-d", (url.path or "").lstrip("/"),
-            "-f", str(destino),
-            "--clean",
-            "--if-exists",
-        ]
-        resultado = subprocess.run(comando, env=env, capture_output=True, text=True)
-        if resultado.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Erro ao gerar backup: {resultado.stderr}")
+        gerar_backup_sql(destino)
+        tipo_gerado = "sql"
     else:
         nome = f"backup_{agora}.json"
         destino = BACKUP_DIR / nome
-        dados = {
-            "gerado_em": datetime.now().isoformat(),
-            "alunos": [vars(a) for a in db.query(Aluno).all()],
-            "cursos": [vars(c) for c in db.query(Curso).all()],
-            "turmas": [vars(t) for t in db.query(Turma).all()],
-            "registros": [vars(r) for r in db.query(Registro).all()],
-            "ocorrencias": [vars(o) for o in db.query(Ocorrencia).all()],
-            "matriculas_historico": [vars(m) for m in db.query(MatriculaHistorico).all()],
-            "usuarios": [
-                {k: v for k, v in vars(u).items() if k != "senha_hash"}
-                for u in db.query(Usuario).all()
-            ],
-        }
-        for lista in dados.values():
-            if isinstance(lista, list):
-                for item in lista:
-                    item.pop("_sa_instance_state", None)
-        destino.write_text(json.dumps(dados, default=str, ensure_ascii=False, indent=2), encoding="utf-8")
+        gerar_backup_json(db, destino)
+        tipo_gerado = "json"
 
     registrar_auditoria_sistema(db, usuario, "gerou", "backup", None, nome, request)
     db.commit()
@@ -433,7 +490,7 @@ def gerar_backup(request: Request, db: Session = Depends(get_db), usuario: Usuar
         "nome": nome,
         "tamanho": destino.stat().st_size,
         "url": f"/api/sistema/backups/{nome}",
-        "tipo": "sql" if pg_dump else "json"
+        "tipo": tipo_gerado,
     }
 
 
@@ -488,6 +545,36 @@ def gerar_backup_anexos(request: Request, db: Session = Depends(get_db), usuario
     }
 
 
+@router.post("/sistema/backups/restaurar-upload")
+async def restaurar_backup_upload(
+    request: Request,
+    confirmacao: str = Form(...),
+    arquivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_atual),
+):
+    exigir_admin(usuario)
+    extensao = Path(arquivo.filename or "").suffix.lower()
+    if extensao not in [".json", ".sql"]:
+        raise HTTPException(status_code=400, detail="Envie um arquivo .json ou .sql")
+
+    agora = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nome_seguro = f"upload_restore_{agora}{extensao}"
+    destino = BACKUP_DIR / nome_seguro
+    destino.write_bytes(await arquivo.read())
+
+    if extensao == ".sql":
+        if confirmacao != "RESTAURAR SQL":
+            raise HTTPException(status_code=400, detail="Digite RESTAURAR SQL para confirmar")
+        restaurar_backup_sql(destino)
+        return {"mensagem": "Backup SQL enviado para restauracao com sucesso"}
+
+    if confirmacao != "RESTAURAR":
+        raise HTTPException(status_code=400, detail="Digite RESTAURAR para confirmar")
+
+    return restaurar_backup(nome_seguro, RestaurarBackupRequest(confirmacao=confirmacao), request, db, usuario)
+
+
 @router.get("/sistema/backups/{nome}")
 def baixar_backup(nome: str, request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_admin(usuario)
@@ -500,11 +587,17 @@ def baixar_backup(nome: str, request: Request, db: Session = Depends(get_db), us
 @router.post("/sistema/backups/{nome}/restaurar")
 def restaurar_backup(nome: str, dados: RestaurarBackupRequest, request: Request, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_admin(usuario)
+    caminho = caminho_backup_seguro(nome)
+    extensao = caminho.suffix.lower()
+    if extensao == ".sql":
+        if dados.confirmacao != "RESTAURAR SQL":
+            raise HTTPException(status_code=400, detail="Digite RESTAURAR SQL para confirmar")
+        restaurar_backup_sql(caminho)
+        return {"mensagem": "Backup SQL restaurado com sucesso"}
     if dados.confirmacao != "RESTAURAR":
         raise HTTPException(status_code=400, detail="Digite RESTAURAR para confirmar")
-    caminho = caminho_backup_seguro(nome)
-    if caminho.suffix.lower() != ".json":
-        raise HTTPException(status_code=400, detail="A restauracao automatica aceita apenas backups JSON gerados pelo sistema.")
+    if extensao != ".json":
+        raise HTTPException(status_code=400, detail="A restauracao aceita backups JSON ou SQL.")
 
     conteudo = json.loads(caminho.read_text(encoding="utf-8"))
     try:
@@ -514,7 +607,21 @@ def restaurar_backup(nome: str, dados: RestaurarBackupRequest, request: Request,
         db.query(Aluno).delete()
         db.query(Turma).delete()
         db.query(Curso).delete()
+        if conteudo.get("anos_letivos") is not None:
+            db.query(AnoLetivo).delete()
 
+        for item in conteudo.get("anos_letivos", []):
+            db.add(AnoLetivo(
+                id=item.get("id"),
+                nome=item.get("nome"),
+                ano=item.get("ano"),
+                data_inicio=parse_data(item.get("data_inicio")),
+                data_fim=parse_data(item.get("data_fim")),
+                ativo=bool(item.get("ativo")),
+                encerrado=bool(item.get("encerrado")),
+                criado_em=parse_datetime(item.get("criado_em")) or datetime.now(),
+            ))
+        db.flush()
         for item in conteudo.get("cursos", []):
             db.add(Curso(id=item.get("id"), nome=item.get("nome"), sigla=item.get("sigla")))
         db.flush()
