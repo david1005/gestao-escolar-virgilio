@@ -88,6 +88,7 @@ async function carregarDados() {
     document.getElementById('data').valueAsDate = new Date();
     preencherFiltroTurmas();
     atualizarListaMotivos();
+    atualizarCamposSaida();
     renderizarResumoRegistros();
     registrosFiltrados = registros;
     paginaAtualRegistros = 1;
@@ -146,6 +147,10 @@ function normalizarTexto(texto) {
         .toLowerCase();
 }
 
+function ehSaidaAntecipada(tipo) {
+    return tipo !== 'Atraso';
+}
+
 function montarItemAluno(a, origem) {
     return `
         <button type="button" class="list-group-item list-group-item-action sugestao-aluno" data-aluno-id="${a.id}" data-origem="${origem}">
@@ -177,11 +182,51 @@ function renderizarSugestoesAluno(termo, containerId, origem) {
         : '<div class="list-group-item text-muted small">Nenhum aluno encontrado.</div>';
 }
 
+function atualizarCamposSaida(prefixo = '') {
+    const editando = prefixo === 'edit';
+    const tipo = document.getElementById(editando ? 'editTipo' : 'tipo')?.value;
+    const tipoSaida = document.getElementById(editando ? 'editTipoSaida' : 'tipoSaida')?.value;
+    const grupoTipoSaida = document.getElementById(editando ? 'editGrupoTipoSaida' : 'grupoTipoSaida');
+    const grupoAulaRetorno = document.getElementById(editando ? 'editGrupoAulaRetorno' : 'grupoAulaRetorno');
+    const grupoStatusRetorno = document.getElementById(editando ? 'editGrupoStatusRetorno' : 'grupoStatusRetorno');
+    const ehSaida = ehSaidaAntecipada(tipo);
+
+    grupoTipoSaida?.classList.toggle('d-none', !ehSaida);
+    grupoAulaRetorno?.classList.toggle('d-none', !ehSaida || tipoSaida !== 'temporaria');
+    grupoStatusRetorno?.classList.toggle('d-none', !ehSaida || tipoSaida !== 'temporaria');
+}
+
+function descricaoRetorno(registro) {
+    if (!ehSaidaAntecipada(registro.tipo)) return '-';
+    if (registro.tipo_saida !== 'temporaria') return '<span class="badge bg-secondary">Não retorna</span>';
+
+    const status = registro.status_retorno || 'Pendente';
+    const classe = status === 'Retornou'
+        ? 'bg-success'
+        : status === 'Nao retornou'
+            ? 'bg-danger'
+            : 'bg-info text-dark';
+    const previsto = registro.aula_retorno_prevista ? `${registro.aula_retorno_prevista}ª aula` : '-';
+    const real = registro.aula_retorno_real ? `<div class="small text-muted">Voltou: ${registro.aula_retorno_real}ª aula</div>` : '';
+    return `<span class="badge ${classe}">${status}</span><div class="small">Previsto: ${previsto}</div>${real}`;
+}
+
+function formatarDataRegistro(registro) {
+    const data = registro.data
+        ? new Date(`${registro.data}T00:00:00`).toLocaleDateString('pt-BR')
+        : '-';
+    if (!registro.criado_em) return data;
+
+    const criadoEm = new Date(registro.criado_em);
+    const hora = criadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${data}<div class="small text-muted">Registrado ${hora}</div>`;
+}
+
 function renderizarRegistros(lista) {
     const tbody = document.getElementById('tabelaRegistros');
 
     if (lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Nenhum registro encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Nenhum registro encontrado.</td></tr>';
         atualizarInfoPaginacaoRegistros(0, 1);
         return;
     }
@@ -200,19 +245,26 @@ function renderizarRegistros(lista) {
         const documento = r.tem_documento
             ? '<i class="bi bi-check-circle-fill text-success"></i>'
             : '<i class="bi bi-x-circle-fill text-danger"></i>';
+        const botaoConfirmarRetorno = ehSaidaAntecipada(r.tipo) && r.tipo_saida === 'temporaria' && (r.status_retorno || 'Pendente') === 'Pendente'
+            ? `<button class="btn btn-sm btn-outline-info me-1" onclick="confirmarRetorno(${r.id})" title="Confirmar retorno">
+        <i class="bi bi-arrow-return-left"></i>
+    </button>`
+            : '';
 
         return `
             <tr>
-                <td>${r.data}</td>
+                <td>${formatarDataRegistro(r)}</td>
                 <td>${getNomeAluno(r.aluno_id)}</td>
                 <td>${getTurmaAluno(r.aluno_id)}</td>
                 <td>${badgeTipo}</td>
                 <td>${r.aula}ª aula</td>
+                <td>${descricaoRetorno(r)}</td>
                 <td>${r.motivo}</td>
                 <td class="text-center">${documento}</td>
                 <td>${r.observacoes || '-'}</td>
                 <td>
     ${perfilUsuario === 'admin' || perfilUsuario === 'ppdt' || perfilUsuario === 'biblioteca' ? `
+    ${botaoConfirmarRetorno}
     <button class="btn btn-sm btn-outline-success me-1" onclick="imprimirAutorizacao(${r.id})" title="Imprimir autorização">
         <i class="bi bi-printer"></i>
     </button>
@@ -284,15 +336,37 @@ function selecionarAluno(id, nome) {
     document.getElementById('sugestoesAluno').innerHTML = '';
 }
 
+function valorInteiroOuNulo(id) {
+    const valor = document.getElementById(id)?.value;
+    return valor ? parseInt(valor) : null;
+}
+
 async function salvarRegistro() {
     const aluno_id = document.getElementById('aluno_id').value;
     if (!aluno_id) { alert('Selecione um aluno!'); return; }
+    const tipoRegistro = document.getElementById('tipo').value;
+    const tipoSaidaValor = ehSaidaAntecipada(tipoRegistro)
+        ? document.getElementById('tipoSaida').value
+        : null;
+    const aulaRetornoSelecionada = valorInteiroOuNulo('aulaRetornoPrevista');
+    const ehTemporaria = ehSaidaAntecipada(tipoRegistro) && (tipoSaidaValor === 'temporaria' || aulaRetornoSelecionada);
+    const tipoSaidaFinal = ehSaidaAntecipada(tipoRegistro) ? (ehTemporaria ? 'temporaria' : 'definitiva') : null;
+    const aulaRetornoPrevista = ehTemporaria ? aulaRetornoSelecionada : null;
+
+    if (tipoSaidaFinal === 'temporaria' && !aulaRetornoPrevista) {
+        alert('Informe a aula prevista de retorno.');
+        return;
+    }
 
     const dados = {
         aluno_id: parseInt(aluno_id),
         data: document.getElementById('data').value,
-        tipo: document.getElementById('tipo').value,
+        tipo: tipoRegistro,
         aula: parseInt(document.getElementById('aula').value),
+        aula_retorno_prevista: aulaRetornoPrevista,
+        aula_retorno_real: null,
+        tipo_saida: tipoSaidaFinal,
+        status_retorno: null,
         motivo: document.getElementById('motivo').value,
         tem_documento: document.getElementById('tem_documento').checked,
         observacoes: document.getElementById('observacoes').value
@@ -321,6 +395,9 @@ async function salvarRegistro() {
         document.getElementById('observacoes').value = '';
         document.getElementById('tem_documento').checked = false;
         document.getElementById('arquivoRegistro').value = '';
+        document.getElementById('tipoSaida').value = 'definitiva';
+        document.getElementById('aulaRetornoPrevista').value = '';
+        atualizarCamposSaida();
         carregarDados();
     } else {
         alert('Erro ao salvar registro. Verifique os campos!');
@@ -334,17 +411,40 @@ function abrirEdicaoRegistro(id) {
     registroEditandoId = id;
     document.getElementById('editTipo').value = r.tipo;
     document.getElementById('editAula').value = r.aula;
+    document.getElementById('editTipoSaida').value = r.tipo_saida || 'definitiva';
+    document.getElementById('editAulaRetornoPrevista').value = r.aula_retorno_prevista || '';
+    document.getElementById('editStatusRetorno').value = r.status_retorno || 'Pendente';
     document.getElementById('editMotivo').value = r.motivo;
     document.getElementById('editObservacoes').value = r.observacoes || '';
     document.getElementById('editTemDocumento').checked = r.tem_documento;
+    atualizarCamposSaida('edit');
 
     new bootstrap.Modal(document.getElementById('modalEdicaoRegistro')).show();
 }
 
 async function salvarEdicaoRegistro() {
+    const tipoRegistro = document.getElementById('editTipo').value;
+    const tipoSaidaValor = ehSaidaAntecipada(tipoRegistro)
+        ? document.getElementById('editTipoSaida').value
+        : null;
+    const aulaRetornoSelecionada = valorInteiroOuNulo('editAulaRetornoPrevista');
+    const ehTemporaria = ehSaidaAntecipada(tipoRegistro) && (tipoSaidaValor === 'temporaria' || aulaRetornoSelecionada);
+    const tipoSaidaFinal = ehSaidaAntecipada(tipoRegistro) ? (ehTemporaria ? 'temporaria' : 'definitiva') : null;
+    const aulaRetornoPrevista = ehTemporaria ? aulaRetornoSelecionada : null;
+
+    if (tipoSaidaFinal === 'temporaria' && !aulaRetornoPrevista) {
+        alert('Informe a aula prevista de retorno.');
+        return;
+    }
+
+    const registroAtual = registros.find(r => r.id === registroEditandoId);
     const dados = {
-        tipo: document.getElementById('editTipo').value,
+        tipo: tipoRegistro,
         aula: parseInt(document.getElementById('editAula').value),
+        aula_retorno_prevista: aulaRetornoPrevista,
+        aula_retorno_real: tipoSaidaFinal === 'temporaria' ? (registroAtual?.aula_retorno_real || null) : null,
+        tipo_saida: tipoSaidaFinal,
+        status_retorno: tipoSaidaFinal === 'temporaria' ? (document.getElementById('editStatusRetorno')?.value || 'Pendente') : null,
         motivo: document.getElementById('editMotivo').value,
         tem_documento: document.getElementById('editTemDocumento').checked,
         observacoes: document.getElementById('editObservacoes').value
@@ -372,6 +472,27 @@ async function excluirRegistro(id) {
     else { alert('Erro ao excluir registro!'); }
 }
 
+async function confirmarRetorno(id) {
+    const registro = registros.find(r => r.id === id);
+    const sugestao = registro?.aula_retorno_prevista || '';
+    const aula = prompt('Informe a aula em que o aluno retornou:', sugestao);
+    if (!aula) return;
+    const aulaNumero = parseInt(aula);
+    if (!aulaNumero || aulaNumero < 1 || aulaNumero > 9) {
+        alert('Informe uma aula entre 1 e 9.');
+        return;
+    }
+
+    const res = await fetch(`/api/registros/${id}/confirmar-retorno?aula_retorno_real=${aulaNumero}`, {
+        method: 'PUT'
+    });
+    if (res.ok) {
+        carregarDados();
+    } else {
+        alert('Erro ao confirmar retorno.');
+    }
+}
+
 function imprimirAutorizacao(id) {
     const registro = registros.find(r => r.id === id);
     if (!registro) return;
@@ -388,6 +509,11 @@ function imprimirAutorizacao(id) {
         ? 'Aluno autorizado a sair antecipadamente da escola.'
         : 'Aluno autorizado a entrar em sala após passar pela secretaria.';
     const destinatario = tipoSaida ? 'Entregar ao vigilante/Porteiro' : 'Entregar ao professor';
+    const retornoTexto = ehSaidaAntecipada(registro.tipo)
+        ? (registro.tipo_saida === 'temporaria'
+            ? `Retorna ainda hoje - previsto para ${registro.aula_retorno_prevista || '-'}ª aula`
+            : 'Não retorna hoje')
+        : '';
     const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const janela = window.open('', '_blank', 'width=420,height=640');
@@ -438,6 +564,7 @@ function imprimirAutorizacao(id) {
                 <div class="campo"><strong>Turma:</strong> ${turma}</div>
                 <div class="campo"><strong>Tipo:</strong> ${registro.tipo}</div>
                 <div class="campo"><strong>Aula:</strong> ${registro.aula}ª aula</div>
+                ${retornoTexto ? `<div class="campo"><strong>Retorno:</strong> ${retornoTexto}</div>` : ''}
                 <div class="campo"><strong>Motivo:</strong> ${registro.motivo}</div>
                 <div class="campo"><strong>Documento:</strong> ${registro.tem_documento ? 'Sim' : 'Não'}</div>
                 ${registro.observacoes ? `<div class="campo"><strong>Obs.:</strong> ${registro.observacoes}</div>` : ''}
@@ -469,7 +596,13 @@ document.getElementById('itensPorPagina').addEventListener('change', () => {
     paginaAtualRegistros = 1;
     renderizarRegistros(registrosFiltrados);
 });
-document.getElementById('tipo').addEventListener('change', atualizarListaMotivos);
+document.getElementById('tipo').addEventListener('change', () => {
+    atualizarListaMotivos();
+    atualizarCamposSaida();
+});
+document.getElementById('tipoSaida')?.addEventListener('change', () => atualizarCamposSaida());
+document.getElementById('editTipo')?.addEventListener('change', () => atualizarCamposSaida('edit'));
+document.getElementById('editTipoSaida')?.addEventListener('change', () => atualizarCamposSaida('edit'));
 
 function filtrar() {
     const nome = document.getElementById('filtroNome').value.toLowerCase();

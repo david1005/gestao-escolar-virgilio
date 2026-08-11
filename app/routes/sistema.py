@@ -648,10 +648,15 @@ def restaurar_backup(nome: str, dados: RestaurarBackupRequest, request: Request,
                 data=parse_data(item.get("data")),
                 tipo=item.get("tipo"),
                 aula=item.get("aula"),
+                aula_retorno_prevista=item.get("aula_retorno_prevista"),
+                aula_retorno_real=item.get("aula_retorno_real"),
+                tipo_saida=item.get("tipo_saida"),
+                status_retorno=item.get("status_retorno"),
                 motivo=item.get("motivo"),
                 tem_documento=item.get("tem_documento"),
                 observacoes=item.get("observacoes"),
                 ano_letivo_id=item.get("ano_letivo_id"),
+                criado_em=parse_datetime(item.get("criado_em")) or datetime.now(),
             ))
         for item in conteudo.get("ocorrencias", []):
             db.add(Ocorrencia(

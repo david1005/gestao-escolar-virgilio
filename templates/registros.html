@@ -196,6 +196,7 @@
                                 <th>Turma</th>
                                 <th>Tipo</th>
                                 <th>Aula</th>
+                                <th>Retorno</th>
                                 <th>Motivo</th>
                                 <th>Documento</th>
                                 <th>Observações</th>
@@ -203,7 +204,7 @@
                             </tr>
                         </thead>
                         <tbody id="tabelaRegistros">
-                            <tr><td colspan="9" class="text-center text-muted">Carregando...</td></tr>
+                            <tr><td colspan="10" class="text-center text-muted">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -263,6 +264,29 @@
                             <option value="9">9ª aula</option>
                         </select>
                     </div>
+                    <div class="mb-3 d-none" id="grupoTipoSaida">
+                        <label class="form-label fw-semibold">Retorno do aluno</label>
+                        <select class="form-select" id="tipoSaida">
+                            <option value="definitiva">Não retorna hoje</option>
+                            <option value="temporaria">Retorna ainda hoje</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 d-none" id="grupoAulaRetorno">
+                        <label class="form-label fw-semibold">Aula prevista de retorno</label>
+                        <select class="form-select" id="aulaRetornoPrevista">
+                            <option value="">Selecione...</option>
+                            <option value="1">1ª aula</option>
+                            <option value="2">2ª aula</option>
+                            <option value="3">3ª aula</option>
+                            <option value="4">4ª aula</option>
+                            <option value="5">5ª aula</option>
+                            <option value="6">6ª aula</option>
+                            <option value="7">7ª aula</option>
+                            <option value="8">8ª aula</option>
+                            <option value="9">9ª aula</option>
+                        </select>
+                        <div class="form-text">Use quando o aluno sai para resolver algo e deve voltar ainda no mesmo dia.</div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Motivo</label>
                         <select class="form-select mb-2" id="motivoSelect" onchange="atualizarMotivo()">
@@ -310,8 +334,6 @@
     const perfilUsuario = "{{ perfil }}";
 </script>
     <script src="/static/js/anexos.js?v=1"></script>
-    <script src="/static/js/registros.js?v=8"></script>
-
 <!-- Modal Edição Registro -->
 <div class="modal fade" id="modalEdicaoRegistro" tabindex="-1">
     <div class="modal-dialog">
@@ -342,6 +364,36 @@
                         <option value="9">9ª aula</option>
                     </select>
                 </div>
+                <div class="mb-3 d-none" id="editGrupoTipoSaida">
+                    <label class="form-label fw-semibold">Retorno do aluno</label>
+                    <select class="form-select" id="editTipoSaida">
+                        <option value="definitiva">Não retorna hoje</option>
+                        <option value="temporaria">Retorna ainda hoje</option>
+                    </select>
+                </div>
+                <div class="mb-3 d-none" id="editGrupoAulaRetorno">
+                    <label class="form-label fw-semibold">Aula prevista de retorno</label>
+                    <select class="form-select" id="editAulaRetornoPrevista">
+                        <option value="">Selecione...</option>
+                        <option value="1">1ª aula</option>
+                        <option value="2">2ª aula</option>
+                        <option value="3">3ª aula</option>
+                        <option value="4">4ª aula</option>
+                        <option value="5">5ª aula</option>
+                        <option value="6">6ª aula</option>
+                        <option value="7">7ª aula</option>
+                        <option value="8">8ª aula</option>
+                        <option value="9">9ª aula</option>
+                    </select>
+                </div>
+                <div class="mb-3 d-none" id="editGrupoStatusRetorno">
+                    <label class="form-label fw-semibold">Status do retorno</label>
+                    <select class="form-select" id="editStatusRetorno">
+                        <option value="Pendente">Pendente</option>
+                        <option value="Retornou">Retornou</option>
+                        <option value="Nao retornou">Não retornou</option>
+                    </select>
+                </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Motivo</label>
                     <input type="text" class="form-control" id="editMotivo">
@@ -364,5 +416,6 @@
         </div>
     </div>
 </div>
+<script src="/static/js/registros.js?v=13"></script>
 </body>
 </html>

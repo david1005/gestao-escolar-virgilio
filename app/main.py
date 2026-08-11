@@ -103,6 +103,33 @@ def garantir_colunas_ciclo_ano_letivo():
 
 garantir_colunas_ciclo_ano_letivo()
 
+def garantir_colunas_registros_retorno():
+    inspector = inspect(engine)
+    if not inspector.has_table("registros"):
+        return
+
+    colunas = {coluna["name"] for coluna in inspector.get_columns("registros")}
+    comandos = []
+    if "aula_retorno_prevista" not in colunas:
+        comandos.append("ALTER TABLE registros ADD COLUMN aula_retorno_prevista INTEGER")
+    if "aula_retorno_real" not in colunas:
+        comandos.append("ALTER TABLE registros ADD COLUMN aula_retorno_real INTEGER")
+    if "tipo_saida" not in colunas:
+        comandos.append("ALTER TABLE registros ADD COLUMN tipo_saida VARCHAR")
+    if "status_retorno" not in colunas:
+        comandos.append("ALTER TABLE registros ADD COLUMN status_retorno VARCHAR")
+    if "criado_em" not in colunas:
+        comandos.append("ALTER TABLE registros ADD COLUMN criado_em TIMESTAMP")
+
+    if comandos:
+        with engine.begin() as conn:
+            for comando in comandos:
+                conn.execute(text(comando))
+            if "criado_em" not in colunas:
+                conn.execute(text("UPDATE registros SET criado_em = CURRENT_TIMESTAMP WHERE criado_em IS NULL"))
+
+garantir_colunas_registros_retorno()
+
 def garantir_ano_letivo_atual_e_vinculos():
     db = SessionLocal()
     try:
