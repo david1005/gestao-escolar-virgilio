@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual | Gestao Escolar</title>
+    <title>Manual | Gestão Escolar</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/static/css/style.css?v=2" rel="stylesheet">
@@ -13,17 +13,17 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="/"><i class="bi bi-mortarboard-fill me-2"></i>Gestao Escolar</a>
+            <a class="navbar-brand fw-bold" href="/"><i class="bi bi-mortarboard-fill me-2"></i>Gestão Escolar</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house me-1"></i>Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house me-1"></i>Início</a></li>
                     {% if permissoes.alunos %}<li class="nav-item"><a class="nav-link" href="/alunos"><i class="bi bi-people me-1"></i>Alunos</a></li>{% endif %}
                     {% if permissoes.registros %}<li class="nav-item"><a class="nav-link" href="/registros"><i class="bi bi-clock-history me-1"></i>Registros</a></li>{% endif %}
-                    {% if permissoes.ocorrencias %}<li class="nav-item"><a class="nav-link" href="/ocorrencias"><i class="bi bi-exclamation-triangle me-1"></i>Ocorrencias</a></li>{% endif %}
+                    {% if permissoes.ocorrencias %}<li class="nav-item"><a class="nav-link" href="/ocorrencias"><i class="bi bi-exclamation-triangle me-1"></i>Ocorrências</a></li>{% endif %}
                     {% if permissoes.dashboard %}<li class="nav-item"><a class="nav-link" href="/dashboard"><i class="bi bi-bar-chart me-1"></i>Dashboard</a></li>{% endif %}
-                    {% if permissoes.usuarios %}<li class="nav-item"><a class="nav-link" href="/usuarios"><i class="bi bi-person-gear me-1"></i>Usuarios</a></li>{% endif %}
-                    {% if permissoes.configuracoes %}<li class="nav-item"><a class="nav-link" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configuracoes</a></li>{% endif %}
+                    {% if permissoes.usuarios %}<li class="nav-item"><a class="nav-link" href="/usuarios"><i class="bi bi-person-gear me-1"></i>Usuários</a></li>{% endif %}
+                    {% if permissoes.configuracoes %}<li class="nav-item"><a class="nav-link" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configurações</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link active" href="/manual"><i class="bi bi-question-circle me-1"></i>Manual</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -43,8 +43,8 @@
     <main class="container my-4">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <div>
-                <h2 class="fw-bold mb-1"><i class="bi bi-question-circle text-primary me-2"></i>Manual do Usuario</h2>
-                <p class="text-muted mb-0">Guia rapido para operar as principais rotinas do sistema.</p>
+                <h2 class="fw-bold mb-1"><i class="bi bi-question-circle text-primary me-2"></i>Manual do Usuário</h2>
+                <p class="text-muted mb-0">Guia rápido para operar as principais rotinas do sistema.</p>
             </div>
             <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir manual</button>
         </div>
@@ -54,54 +54,54 @@
                 <div class="list-group sticky-top" style="top: 90px">
                     <a class="list-group-item list-group-item-action" href="#inicio">Tela inicial</a>
                     <a class="list-group-item list-group-item-action" href="#alunos">Alunos e turmas</a>
-                    <a class="list-group-item list-group-item-action" href="#registros">Atrasos e saidas</a>
-                    <a class="list-group-item list-group-item-action" href="#ocorrencias">Ocorrencias</a>
+                    <a class="list-group-item list-group-item-action" href="#registros">Atrasos e saídas</a>
+                    <a class="list-group-item list-group-item-action" href="#ocorrencias">Ocorrências</a>
                     <a class="list-group-item list-group-item-action" href="#dashboard">Dashboard</a>
-                    <a class="list-group-item list-group-item-action" href="#usuarios">Usuarios e permissoes</a>
-                    <a class="list-group-item list-group-item-action" href="#configuracoes">Configuracoes</a>
-                    <a class="list-group-item list-group-item-action" href="#backup">Backup e restauracao</a>
+                    <a class="list-group-item list-group-item-action" href="#usuarios">Usuários e permissões</a>
+                    <a class="list-group-item list-group-item-action" href="#configuracoes">Configurações</a>
+                    <a class="list-group-item list-group-item-action" href="#backup">Backup e restauração</a>
                 </div>
             </div>
             <div class="col-lg-8">
                 <section id="inicio" class="card shadow-sm mb-3"><div class="card-body">
                     <h5 class="fw-bold">Tela inicial</h5>
-                    <p>A tela inicial mostra atalhos de acordo com o perfil do usuario. Coordenadores, diretores de turma, PPDT e administradores veem apenas os modulos liberados para seu acesso.</p>
+                    <p>A tela inicial mostra atalhos de acordo com o perfil do usuário. Coordenadores, diretores de turma, PPDT e administradores veem apenas os módulos liberados para seu acesso.</p>
                 </div></section>
 
                 <section id="alunos" class="card shadow-sm mb-3"><div class="card-body">
                     <h5 class="fw-bold">Alunos e turmas</h5>
-                    <p>Use a pagina Alunos para cadastrar, editar, importar e consultar estudantes. A turma deve estar cadastrada antes do aluno. A importacao por Excel/CSV aceita modelos separados por curso e ano.</p>
-                    <p class="mb-0">A virada de ano fica em Configuracoes &gt; Ano letivo. Antes de executar, o sistema mostra uma previa por turma, permite informar as datas do proximo ano letivo, cria esse ano automaticamente se ele ainda nao existir, promove alunos do 1o para o 2o, do 2o para o 3o e marca alunos do 3o como concluidos.</p>
+                    <p>Use a página Alunos para cadastrar, editar, importar e consultar estudantes. A turma deve estar cadastrada antes do aluno. A importação por Excel/CSV aceita modelos separados por curso e ano.</p>
+                    <p class="mb-0">A virada de ano fica em Configurações &gt; Ano letivo. Antes de executar, o sistema mostra uma previa por turma, permite informar as datas do proximo ano letivo, cria esse ano automaticamente se ele ainda nao existir, promove alunos do 1o para o 2o, do 2o para o 3o e marca alunos do 3o como concluidos.</p>
                 </div></section>
 
                 <section id="registros" class="card shadow-sm mb-3"><div class="card-body">
-                    <h5 class="fw-bold">Atrasos e saidas</h5>
-                    <p>Registre atrasos e saidas antecipadas pesquisando o aluno pelo nome. O sistema permite imprimir autorizacao de entrada ou saida e anexar documentos ao registro.</p>
+                    <h5 class="fw-bold">Atrasos e saídas</h5>
+                    <p>Registre atrasos e saídas antecipadas pesquisando o aluno pelo nome. O sistema permite imprimir autorização de entrada ou saída e anexar documentos ao registro.</p>
                 </div></section>
 
                 <section id="ocorrencias" class="card shadow-sm mb-3"><div class="card-body">
-                    <h5 class="fw-bold">Ocorrencias</h5>
-                    <p>Use Ocorrencias para registrar fatos disciplinares ou de acompanhamento. O termo pode ser impresso com dados do aluno, medida tomada, ciencia do responsavel e assinaturas.</p>
+                    <h5 class="fw-bold">Ocorrências</h5>
+                    <p>Use Ocorrências para registrar fatos disciplinares ou de acompanhamento. O termo pode ser impresso com dados do aluno, medida tomada, ciência do responsavel e assinaturas.</p>
                 </div></section>
 
                 <section id="dashboard" class="card shadow-sm mb-3"><div class="card-body">
                     <h5 class="fw-bold">Dashboard</h5>
-                    <p>O dashboard consolida indicadores por periodo, turma e curso. Coordenadores e diretores visualizam somente as turmas autorizadas.</p>
+                    <p>O dashboard consolida indicadores por período, turma e curso. Coordenadores e diretores visualizam somente as turmas autorizadas.</p>
                 </div></section>
 
                 <section id="usuarios" class="card shadow-sm mb-3"><div class="card-body">
-                    <h5 class="fw-bold">Usuarios e permissoes</h5>
-                    <p>Administradores gerenciam usuarios, perfis, cursos vinculados e turma do diretor. As permissoes definem quem visualiza, edita, imprime, exporta e acessa configuracoes.</p>
+                    <h5 class="fw-bold">Usuários e permissões</h5>
+                    <p>Administradores gerenciam usuários, perfis, cursos vinculados e turma do diretor. As permissões definem quem visualiza, edita, imprime, exporta e acessa configurações.</p>
                 </div></section>
 
                 <section id="configuracoes" class="card shadow-sm mb-3"><div class="card-body">
-                    <h5 class="fw-bold">Configuracoes</h5>
-                    <p>Cadastre dados da escola, anos letivos, cursos, turmas, listas de motivos, tipos de ocorrencia, medidas, relatorios, anexos e auditoria. Administradores tambem executam a virada de ano pela aba Ano letivo, com conferencia previa antes da confirmacao.</p>
+                    <h5 class="fw-bold">Configurações</h5>
+                    <p>Cadastre dados da escola, anos letivos, cursos, turmas, listas de motivos, tipos de ocorrência, medidas, relatórios, anexos e auditoria. Administradores também executam a virada de ano pela aba Ano letivo, com conferência previa antes da confirmação.</p>
                 </div></section>
 
                 <section id="backup" class="card shadow-sm mb-3"><div class="card-body">
-                    <h5 class="fw-bold">Backup e restauracao</h5>
-                    <p>Gere backup antes de alteracoes grandes. A restauracao automatica aceita backups JSON gerados pelo sistema e substitui dados academicos, mantendo usuarios e senhas.</p>
+                    <h5 class="fw-bold">Backup e restauração</h5>
+                    <p>Gere backup antes de alterações grandes. A restauração automática aceita backups JSON gerados pelo sistema e substitui dados acadêmicos, mantendo usuários e senhas.</p>
                 </div></section>
             </div>
         </div>

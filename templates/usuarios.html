@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usuarios | Gestao Escolar</title>
+    <title>Usuários | Gestão Escolar</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
@@ -15,14 +15,14 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="/">
-                <i class="bi bi-mortarboard-fill me-2"></i>Gestao Escolar
+                <i class="bi bi-mortarboard-fill me-2"></i>Gestão Escolar
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house me-1"></i>Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house me-1"></i>Início</a></li>
                     {% if permissoes.alunos %}
                     <li class="nav-item"><a class="nav-link" href="/alunos"><i class="bi bi-people me-1"></i>Alunos</a></li>
                     {% endif %}
@@ -30,16 +30,16 @@
                     <li class="nav-item"><a class="nav-link" href="/registros"><i class="bi bi-clock-history me-1"></i>Registros</a></li>
                     {% endif %}
                     {% if permissoes.ocorrencias %}
-                    <li class="nav-item"><a class="nav-link" href="/ocorrencias"><i class="bi bi-exclamation-triangle me-1"></i>Ocorrencias</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ocorrencias"><i class="bi bi-exclamation-triangle me-1"></i>Ocorrências</a></li>
                     {% endif %}
                     {% if permissoes.dashboard %}
                     <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="bi bi-bar-chart me-1"></i>Dashboard</a></li>
                     {% endif %}
                     {% if permissoes.usuarios %}
-                    <li class="nav-item"><a class="nav-link active" href="/usuarios"><i class="bi bi-person-gear me-1"></i>Usuarios</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/usuarios"><i class="bi bi-person-gear me-1"></i>Usuários</a></li>
                     {% endif %}
                     {% if permissoes.configuracoes %}
-                    <li class="nav-item"><a class="nav-link" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configuracoes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configurações</a></li>
                     {% endif %}
                     <li class="nav-item"><a class="nav-link" href="/manual"><i class="bi bi-question-circle me-1"></i>Manual</a></li>
                 </ul>
@@ -61,9 +61,9 @@
 
     <div class="container-fluid px-4 my-4">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-            <h4 class="fw-bold mb-0"><i class="bi bi-person-gear me-2 text-primary"></i>Gerenciar Usuarios</h4>
+            <h4 class="fw-bold mb-0"><i class="bi bi-person-gear me-2 text-primary"></i>Gerenciar Usuários</h4>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalUsuario">
-                <i class="bi bi-plus-lg me-1"></i>Novo Usuario
+                <i class="bi bi-plus-lg me-1"></i>Novo Usuário
             </button>
         </div>
 
@@ -127,13 +127,13 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Novo Usuario</h5>
+                    <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Novo Usuário</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nome completo</label>
-                        <input type="text" class="form-control" id="nome" placeholder="Nome do usuario">
+                        <input type="text" class="form-control" id="nome" placeholder="Nome do usuário">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Email</label>
@@ -177,7 +177,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
-                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar Usuario</h5>
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar Usuário</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -234,7 +234,7 @@
                         A nova senha passa a valer imediatamente para este usuario.
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Usuario</label>
+                        <label class="form-label fw-semibold">Usuário</label>
                         <input type="text" class="form-control" id="resetUsuarioNome" disabled>
                     </div>
                     <div class="mb-3">

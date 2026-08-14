@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuracoes | Gestao Escolar</title>
+    <title>Configuracões | Gestão Escolar</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
@@ -13,7 +13,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="/"><i class="bi bi-mortarboard-fill me-2"></i>Gestao Escolar</a>
+            <a class="navbar-brand fw-bold" href="/"><i class="bi bi-mortarboard-fill me-2"></i>Gestão Escolar</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
@@ -25,16 +25,16 @@
                     <li class="nav-item"><a class="nav-link" href="/registros"><i class="bi bi-clock-history me-1"></i>Registros</a></li>
                     {% endif %}
                     {% if permissoes.ocorrencias %}
-                    <li class="nav-item"><a class="nav-link" href="/ocorrencias"><i class="bi bi-exclamation-triangle me-1"></i>Ocorrencias</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ocorrencias"><i class="bi bi-exclamation-triangle me-1"></i>Ocorrências</a></li>
                     {% endif %}
                     {% if permissoes.dashboard %}
                     <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="bi bi-bar-chart me-1"></i>Dashboard</a></li>
                     {% endif %}
                     {% if permissoes.usuarios %}
-                    <li class="nav-item"><a class="nav-link" href="/usuarios"><i class="bi bi-person-gear me-1"></i>Usuarios</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/usuarios"><i class="bi bi-person-gear me-1"></i>Usuários</a></li>
                     {% endif %}
                     {% if permissoes.configuracoes %}
-                    <li class="nav-item"><a class="nav-link active" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configuracoes</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/configuracoes"><i class="bi bi-sliders me-1"></i>Configurações</a></li>
                     {% endif %}
                     <li class="nav-item"><a class="nav-link" href="/manual"><i class="bi bi-question-circle me-1"></i>Manual</a></li>
                 </ul>
@@ -53,7 +53,7 @@
     </nav>
 
     <div class="container-fluid px-4 my-4">
-        <h4 class="fw-bold mb-4"><i class="bi bi-sliders me-2 text-primary"></i>Configuracoes do Sistema</h4>
+        <h4 class="fw-bold mb-4"><i class="bi bi-sliders me-2 text-primary"></i>Configuracões do Sistema</h4>
 
         <ul class="nav nav-tabs mb-3">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEscola">Escola</button></li>
@@ -62,8 +62,8 @@
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCursosTurmas">Cursos e turmas</button></li>
             {% endif %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabListas">Listas</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPermissoes">Permissoes</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRelatorios">Relatorios PDF</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPermissoes">Permissões</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRelatorios">Relatórios PDF</button></li>
             {% if perfil == 'admin' %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBackup">Backup</button></li>
             {% endif %}
@@ -77,10 +77,10 @@
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label fw-semibold">Nome da escola</label><input class="form-control" id="config_escola_nome"></div>
                         <div class="col-md-6"><label class="form-label fw-semibold">Telefone</label><input class="form-control" id="config_escola_telefone"></div>
-                        <div class="col-12"><label class="form-label fw-semibold">Endereco</label><input class="form-control" id="config_escola_endereco"></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold">Responsavel nos documentos</label><input class="form-control" id="config_responsavel_sistema"></div>
+                        <div class="col-12"><label class="form-label fw-semibold">Endereço</label><input class="form-control" id="config_escola_endereco"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold">Responsável nos documentos</label><input class="form-control" id="config_responsavel_sistema"></div>
                     </div>
-                    <button class="btn btn-primary mt-3" onclick="salvarConfiguracoes()"><i class="bi bi-check-lg me-1"></i>Salvar configuracoes</button>
+                    <button class="btn btn-primary mt-3" onclick="salvarConfiguracoes()"><i class="bi bi-check-lg me-1"></i>Salvar configurações</button>
                 </div></div>
             </div>
 
@@ -93,12 +93,12 @@
                                 <div>
                                     <h5 class="fw-bold mb-1"><i class="bi bi-arrow-repeat me-2 text-warning"></i>Virada de Ano Letivo</h5>
                                     <div class="text-muted">
-                                        Promove alunos do 1 ano para o 2 ano, do 2 ano para o 3 ano e marca alunos do 3 ano como concluidos.
-                                        O proximo ano letivo pode ser criado automaticamente durante a virada.
+                                        Promove alunos do 1 ano para o 2 ano, do 2 ano para o 3 ano e marca alunos do 3 ano como concluídos.
+                                        O próximo ano letivo pode ser criado automaticamente durante a virada.
                                     </div>
                                 </div>
                                 <button class="btn btn-warning text-dark" onclick="abrirViradaAnoLetivo()">
-                                    <i class="bi bi-eye me-1"></i>Ver previa da virada
+                                    <i class="bi bi-eye me-1"></i>Ver prévia da virada
                                 </button>
                             </div>
                         </div>
@@ -124,7 +124,7 @@
                                             <input type="number" class="form-control" id="anoNumero" placeholder="2027">
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label fw-semibold">Inicio</label>
+                                            <label class="form-label fw-semibold">Início</label>
                                             <input type="date" class="form-control" id="anoInicio">
                                         </div>
                                         <div class="col-md-2">
@@ -143,7 +143,7 @@
                                 </div>
                             </div>
                             <div class="card-body p-0">
-                                <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Nome</th><th>Periodo</th><th>Status</th><th>Acoes</th></tr></thead><tbody id="listaAnos"></tbody></table>
+                                <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Nome</th><th>Período</th><th>Status</th><th>Ações</th></tr></thead><tbody id="listaAnos"></tbody></table>
                             </div>
                         </div>
                     </div>
@@ -232,7 +232,7 @@
                     <div class="card-body">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-1"></i>
-                            Escreva um item por linha. Essas listas aparecem automaticamente nas telas de registros e ocorrencias.
+                            Escreva um item por linha. Essas listas aparecem automaticamente nas telas de registros e ocorrências.
                         </div>
                         <div class="row g-3">
                             <div class="col-lg-6">
@@ -240,15 +240,15 @@
                                 <textarea class="form-control" id="listaMotivosAtraso" rows="8"></textarea>
                             </div>
                             <div class="col-lg-6">
-                                <label class="form-label fw-semibold">Motivos de saida antecipada</label>
+                                <label class="form-label fw-semibold">Motivos de saída antecipada</label>
                                 <textarea class="form-control" id="listaMotivosSaida" rows="8"></textarea>
                             </div>
                             <div class="col-lg-6">
-                                <label class="form-label fw-semibold">Tipos de ocorrencia</label>
+                                <label class="form-label fw-semibold">Tipos de ocorrência</label>
                                 <textarea class="form-control" id="listaTiposOcorrencia" rows="7"></textarea>
                             </div>
                             <div class="col-lg-6">
-                                <label class="form-label fw-semibold">Medidas de ocorrencia</label>
+                                <label class="form-label fw-semibold">Medidas de ocorrência</label>
                                 <textarea class="form-control" id="listaMedidasOcorrencia" rows="7"></textarea>
                             </div>
                         </div>
@@ -263,16 +263,16 @@
                 <div class="card shadow-sm"><div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3"><label class="form-label fw-semibold">Perfil</label><select id="permissaoPerfil" class="form-select" onchange="renderPermissoesPerfil()"></select></div>
-                        <div class="col-md-9"><label class="form-label fw-semibold">Permissoes</label><div id="permissoesChecks" class="border rounded p-3"></div></div>
+                        <div class="col-md-9"><label class="form-label fw-semibold">Permissões</label><div id="permissoesChecks" class="border rounded p-3"></div></div>
                     </div>
-                    <button class="btn btn-primary mt-3" onclick="salvarPermissoes()">Salvar permissoes</button>
+                    <button class="btn btn-primary mt-3" onclick="salvarPermissoes()">Salvar permissões</button>
                 </div></div>
             </div>
 
             <div class="tab-pane fade" id="tabRelatorios">
                 <div class="card shadow-sm"><div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label fw-semibold">Tipo</label><select id="relatorioTipo" class="form-select"><option value="turmas">Resumo por turma</option><option value="alunos">Alunos</option><option value="ocorrencias">Ocorrencias</option></select></div>
+                        <div class="col-md-4"><label class="form-label fw-semibold">Tipo</label><select id="relatorioTipo" class="form-select"><option value="turmas">Resumo por turma</option><option value="alunos">Alunos</option><option value="ocorrencias">Ocorrências</option></select></div>
                         <div class="col-md-4"><label class="form-label fw-semibold">Turma</label><select id="relatorioTurma" class="form-select"><option value="">Todas</option></select></div>
                         <div class="col-md-4 d-flex align-items-end"><button class="btn btn-danger w-100" onclick="abrirRelatorio()"><i class="bi bi-file-pdf me-1"></i>Abrir PDF</button></div>
                     </div>
@@ -285,20 +285,20 @@
                     <div class="card-body">
                         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
                             <div>
-                                <h5 class="fw-bold mb-1">Backup e restauracao</h5>
-                                <div class="text-muted">Gere arquivos de seguranca antes de mudancas grandes, migracoes ou uso em producao.</div>
+                                <h5 class="fw-bold mb-1">Backup e restauração</h5>
+                                <div class="text-muted">Gere arquivos de segurança antes de mudanças grandes, migrações ou uso em produção.</div>
                             </div>
                         </div>
                         <div class="row g-3">
                             <div class="col-lg-4">
                                 <label class="form-label fw-semibold">Tipo de backup</label>
                                 <select class="form-select" id="backupTipo">
-                                    <option value="auto">Automatico recomendado</option>
+                                    <option value="auto">Automático recomendado</option>
                                     <option value="sql">Banco completo SQL</option>
                                     <option value="json">Dados do sistema JSON</option>
                                     <option value="anexos">Anexos ZIP</option>
                                 </select>
-                                <div class="form-text">SQL e ideal para migracao completa. JSON e restaurado pelo sistema. ZIP guarda os arquivos anexados.</div>
+                                <div class="form-text">SQL e ideal para migração completa. JSON e restaurado pelo sistema. ZIP guarda os arquivos anexados.</div>
                             </div>
                             <div class="col-lg-3 d-flex align-items-end">
                                 <button class="btn btn-success w-100" onclick="gerarBackupSelecionado()">
@@ -323,7 +323,7 @@
                 </div></div>
                 <div class="alert alert-warning mt-3 mb-0">
                     <i class="bi bi-exclamation-triangle me-1"></i>
-                    A restauracao JSON substitui dados academicos de forma controlada. A restauracao SQL e avancada e pode substituir toda a estrutura do banco. Anexos ZIP devem ser guardados junto com o backup do banco.
+                    A restauração JSON substitui dados academicos de forma controlada. A restauração SQL é avançada e pode substituir toda a estrutura do banco. Anexos ZIP devem ser guardados junto com o backup do banco.
                 </div>
             </div>
             {% endif %}
@@ -331,10 +331,10 @@
             <div class="tab-pane fade" id="tabAnexos">
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-1"></i>
-                    Os anexos agora sao enviados direto no perfil do aluno, nos registros e nas ocorrencias. Esta aba fica apenas para consulta geral.
+                    Os anexos agora sao enviados direto no perfil do aluno, nos registros e nas ocorrências. Esta aba fica apenas para consulta geral.
                 </div>
-                <div class="card shadow-sm"><div class="card-header fw-semibold">Ultimos anexos</div><div class="card-body p-0">
-                    <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Arquivo</th><th>Entidade</th><th>Enviado por</th><th>Data</th><th>Acoes</th></tr></thead><tbody id="listaAnexos"></tbody></table>
+                <div class="card shadow-sm"><div class="card-header fw-semibold">Últimos anexos</div><div class="card-body p-0">
+                    <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Arquivo</th><th>Entidade</th><th>Enviado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="listaAnexos"></tbody></table>
                 </div></div>
             </div>
 
@@ -342,17 +342,17 @@
                 <div class="card shadow-sm mb-3">
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-3"><label class="form-label fw-semibold">Usuario</label><input class="form-control" id="auditoriaUsuario"></div>
-                            <div class="col-md-2"><label class="form-label fw-semibold">Acao</label><input class="form-control" id="auditoriaAcao"></div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Usuário</label><input class="form-control" id="auditoriaUsuario"></div>
+                            <div class="col-md-2"><label class="form-label fw-semibold">Ação</label><input class="form-control" id="auditoriaAcao"></div>
                             <div class="col-md-2"><label class="form-label fw-semibold">Entidade</label><input class="form-control" id="auditoriaEntidade"></div>
-                            <div class="col-md-2"><label class="form-label fw-semibold">Inicio</label><input type="date" class="form-control" id="auditoriaInicio"></div>
+                            <div class="col-md-2"><label class="form-label fw-semibold">Início</label><input type="date" class="form-control" id="auditoriaInicio"></div>
                             <div class="col-md-2"><label class="form-label fw-semibold">Fim</label><input type="date" class="form-control" id="auditoriaFim"></div>
                             <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100" onclick="carregarAuditoria()"><i class="bi bi-search"></i></button></div>
                         </div>
                     </div>
                 </div>
                 <div class="card shadow-sm"><div class="card-body p-0">
-                    <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Data</th><th>Usuario</th><th>Acao</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="listaAuditoria"></tbody></table>
+                    <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="listaAuditoria"></tbody></table>
                 </div></div>
             </div>
         </div>
@@ -380,7 +380,7 @@
                         </div>
                         <div class="col-md">
                             <div class="border rounded p-3 h-100">
-                                <div class="text-muted small">Proximo ano</div>
+                                <div class="text-muted small">Próximo ano</div>
                                 <div class="fw-bold" id="viradaProximoAno">-</div>
                                 <div class="small text-muted" id="viradaProximoStatus">-</div>
                             </div>
@@ -399,7 +399,7 @@
                         </div>
                         <div class="col-md">
                             <div class="border rounded p-3 h-100">
-                                <div class="text-muted small">3 ano concluidos</div>
+                                <div class="text-muted small">3 ano concluídos</div>
                                 <div class="h4 mb-0" id="viradaTerceiro">0</div>
                             </div>
                         </div>
