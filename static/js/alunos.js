@@ -86,6 +86,14 @@ function formatarTurma(turma, curso) {
     return `${turma.ano}\u00ba ${turma.letra} - ${curso ? curso.nome : ''}`;
 }
 
+function nomeAlunoParaOrdenacao(nome) {
+    return String(nome || '')
+        .replace(/^\s*\d+\s*[-.)]\s*/, '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+}
+
 // Mostra os alunos na tabela
 function renderizarAlunos(alunos) {
     const tbody = document.getElementById('tabelaAlunos');
@@ -93,7 +101,7 @@ function renderizarAlunos(alunos) {
     if (!alunos || alunos.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="8" class="text-center text-muted">
                     Nenhum aluno cadastrado.
                 </td>
             </tr>
@@ -108,13 +116,15 @@ function renderizarAlunos(alunos) {
     const inicio = (paginaAtual - 1) * porPagina;
     const alunosPagina = alunos.slice(inicio, inicio + porPagina);
 
-    tbody.innerHTML = alunosPagina.map(a => {
+    tbody.innerHTML = alunosPagina.map((a, indice) => {
         const turma = turmas.find(t => t.id === a.turma_id);
         const curso = turma ? cursos.find(c => c.id === turma.curso_id) : null;
         const turmaLabel = turma ? formatarTurma(turma, curso) : '-';
+        const numeroLinha = inicio + indice + 1;
 
         return `
             <tr>
+                <td>${numeroLinha}</td>
                 <td>${a.nome}</td>
                 <td>${a.matricula}</td>
                 <td>${turmaLabel}</td>
@@ -307,7 +317,7 @@ function aplicarFiltros() {
         const combinaCurso = cursoId === '' || (turma && turma.curso_id === parseInt(cursoId));
 
         return combinaNome && combinaTurma && combinaAno && combinaCurso;
-    });
+    }).sort((a, b) => nomeAlunoParaOrdenacao(a.nome).localeCompare(nomeAlunoParaOrdenacao(b.nome), 'pt-BR'));
 
     paginaAtual = 1;
     renderizarAlunos(alunosFiltrados);

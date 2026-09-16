@@ -59,6 +59,58 @@
     z-index: 1050;
 }
 
+.ocorrencias-table {
+    min-width: 1320px;
+    table-layout: fixed;
+}
+
+.ocorrencias-table th,
+.ocorrencias-table td {
+    vertical-align: middle;
+}
+
+.ocorrencias-table .coluna-texto {
+    width: 190px;
+}
+
+.ocorrencias-table .coluna-acoes-tomadas {
+    width: 210px;
+}
+
+.texto-compacto {
+    max-width: 100%;
+}
+
+.texto-compacto__previa {
+    display: -webkit-box;
+    overflow: hidden;
+    min-height: 2.7em;
+    max-height: 2.7em;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.texto-compacto__botao {
+    margin-top: 4px;
+    padding: 0;
+    font-size: 0.78rem;
+    text-decoration: none;
+}
+
+.ocorrencias-botoes {
+    width: 170px;
+    white-space: nowrap;
+}
+
+.texto-completo-modal {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}
+
 html[data-bs-theme="dark"] body {
     background: #111827;
     color: #e5e7eb;

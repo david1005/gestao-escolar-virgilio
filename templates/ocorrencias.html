@@ -193,7 +193,7 @@
         <div class="card shadow-sm">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle ocorrencias-table">
                         <thead class="table-light">
                             <tr>
                                 <th>Data</th>
@@ -203,9 +203,9 @@
                                 <th>Tipo</th>
                                 <th>Gravidade</th>
                                 <th>Status</th>
-                                <th>Descrição</th>
+                                <th class="coluna-texto">Descrição</th>
                                 <th>Medida</th>
-                                <th>Acoes</th>
+                                <th class="coluna-texto coluna-acoes-tomadas">Ações tomadas</th>
                                 <th>Registrado por</th>
                                 <th>Resp. Notificado</th>
                                 <th>Ações</th>
@@ -328,7 +328,7 @@
     const perfilUsuario = "{{ perfil }}";
 </script>
     <script src="/static/js/anexos.js?v=1"></script>
-    <script src="/static/js/ocorrencias.js?v=7"></script>
+    <script src="/static/js/ocorrencias.js?v=8"></script>
 <!-- Modal Edição -->
 <div class="modal fade" id="modalEdicao" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -401,6 +401,24 @@
                 <button type="button" class="btn btn-warning" onclick="salvarEdicao()">
                     <i class="bi bi-check-lg me-1"></i>Salvar edição
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Texto Completo -->
+<div class="modal fade" id="modalTextoOcorrencia" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTextoOcorrenciaTitulo">Detalhes da ocorrência</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="texto-completo-modal" id="modalTextoOcorrenciaConteudo"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>

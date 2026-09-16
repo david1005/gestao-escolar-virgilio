@@ -1,5 +1,6 @@
 import csv
 import io
+import re
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -18,6 +19,10 @@ from app.schemas.aluno import AlunoCreate, AlunoUpdate, CursoCreate, TurmaCreate
 from app.services.ano_letivo import obter_ano_letivo_ativo
 
 router = APIRouter()
+
+
+def limpar_prefixo_nome_aluno(nome: str | None):
+    return re.sub(r"^\s*\d+\s*[-.)]\s*", "", nome or "").strip()
 
 
 def exigir_alunos(db: Session, usuario: Usuario):
@@ -121,7 +126,7 @@ def analisar_linhas_importacao(db: Session, leitor, turma_importacao: Turma | No
         matricula = (linha.get("matricula") or "").strip()
         item = {
             "linha": indice,
-            "nome": (linha.get("nome") or "").strip(),
+            "nome": limpar_prefixo_nome_aluno(linha.get("nome")),
             "matricula": matricula,
             "turma": "-",
             "status": "criar",
@@ -395,7 +400,9 @@ def criar_aluno(aluno: AlunoCreate, db: Session = Depends(get_db), usuario: Usua
     if usuario.perfil not in ["admin", "ppdt"]:
         raise HTTPException(status_code=403, detail="Acesso negado")
     ano_letivo = obter_ano_letivo_ativo(db)
-    db_aluno = Aluno(**aluno.model_dump(), ano_letivo_id=ano_letivo.id)
+    dados = aluno.model_dump()
+    dados["nome"] = limpar_prefixo_nome_aluno(dados.get("nome"))
+    db_aluno = Aluno(**dados, ano_letivo_id=ano_letivo.id)
     db.add(db_aluno)
     db.flush()
     registrar_matricula_historico(db, db_aluno, ano_letivo.id, db_aluno.status)
@@ -421,7 +428,7 @@ def listar_alunos(status: str = Query("ativo"), db: Session = Depends(get_db), u
         alunos = query.filter(Aluno.turma_id.in_(turma_ids)).all()
     else:
         alunos = query.all()
-    return alunos
+    return sorted(alunos, key=lambda aluno: limpar_prefixo_nome_aluno(aluno.nome).casefold())
 
 
 @router.get("/alunos/virada-ano/previa")
@@ -554,7 +561,9 @@ def editar_aluno(aluno_id: int, dados: AlunoUpdate, db: Session = Depends(get_db
 
     turma_anterior = aluno.turma_id
     status_anterior = aluno.status
-    for campo, valor in dados.model_dump().items():
+    dados_limpos = dados.model_dump()
+    dados_limpos["nome"] = limpar_prefixo_nome_aluno(dados_limpos.get("nome"))
+    for campo, valor in dados_limpos.items():
         setattr(aluno, campo, valor)
     ano_letivo = obter_ano_letivo_ativo(db)
     if aluno.turma_id != turma_anterior or aluno.status != status_anterior:
@@ -634,7 +643,7 @@ def importar_alunos_csv(
             turma = resolver_turma_importacao(db, linha, turma_importacao)
 
             aluno = Aluno(
-                nome=(linha.get("nome") or "").strip(),
+                nome=limpar_prefixo_nome_aluno(linha.get("nome")),
                 matricula=matricula,
                 data_nascimento=parse_data_nascimento(linha.get("data_nascimento") or ""),
                 responsavel=(linha.get("responsavel") or "").strip(),

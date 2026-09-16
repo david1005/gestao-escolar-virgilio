@@ -142,6 +142,45 @@ function getStatusBadge(status) {
     return '<span class="badge bg-warning text-dark">Aberta</span>';
 }
 
+function escaparHtml(valor) {
+    const div = document.createElement('div');
+    div.textContent = String(valor || '');
+    return div.innerHTML;
+}
+
+function montarTextoCompacto(valor, ocorrenciaId, campo, titulo) {
+    const texto = String(valor || '').trim();
+    if (!texto) return '<span class="text-muted">-</span>';
+
+    const textoSeguro = escaparHtml(texto);
+    const precisaExpandir = texto.length > 120 || texto.includes('\n');
+
+    return `
+        <div class="texto-compacto">
+            <div class="texto-compacto__previa">${textoSeguro}</div>
+            ${precisaExpandir ? `
+                <button type="button" class="btn btn-link btn-sm texto-compacto__botao" onclick="abrirTextoOcorrencia(${ocorrenciaId}, '${campo}')" title="Ver ${titulo.toLowerCase()} completa">
+                    <i class="bi bi-eye me-1"></i>Ver completa
+                </button>
+            ` : ''}
+        </div>
+    `;
+}
+
+function abrirTextoOcorrencia(id, campo) {
+    const ocorrencia = ocorrencias.find(o => o.id === id);
+    if (!ocorrencia) return;
+
+    const titulos = {
+        descricao: 'Descrição da ocorrência',
+        acoes_tomadas: 'Ações tomadas'
+    };
+
+    document.getElementById('modalTextoOcorrenciaTitulo').textContent = titulos[campo] || 'Detalhes da ocorrência';
+    document.getElementById('modalTextoOcorrenciaConteudo').textContent = ocorrencia[campo] || '-';
+    new bootstrap.Modal(document.getElementById('modalTextoOcorrencia')).show();
+}
+
 function renderizarOcorrencias(lista) {
     const tbody = document.getElementById('tabelaOcorrencias');
 
@@ -174,12 +213,12 @@ function renderizarOcorrencias(lista) {
                 <td>${o.tipo}</td>
                 <td>${getGravidadeBadge(o.gravidade)}</td>
                 <td>${getStatusBadge(o.status)}</td>
-                <td>${o.descricao}</td>
+                <td class="coluna-texto">${montarTextoCompacto(o.descricao, o.id, 'descricao', 'descrição')}</td>
                 <td>${getMedidaBadge(o.medida)}</td>
-                <td>${o.acoes_tomadas || '-'}</td>
-                <td>${o.registrado_por}</td>
+                <td class="coluna-texto coluna-acoes-tomadas">${montarTextoCompacto(o.acoes_tomadas, o.id, 'acoes_tomadas', 'ações')}</td>
+                <td>${escaparHtml(o.registrado_por)}</td>
                 <td class="text-center">${notificado}</td>
-                <td>
+                <td class="ocorrencias-botoes">
                     <a class="btn btn-sm btn-outline-secondary me-1" href="/aluno/${o.aluno_id}" title="Historico do aluno">
                         <i class="bi bi-person-lines-fill"></i>
                     </a>
