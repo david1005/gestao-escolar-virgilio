@@ -59,8 +59,14 @@
     z-index: 1050;
 }
 
+.ocorrencias-page {
+    max-width: 1800px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
 .ocorrencias-table {
-    min-width: 1320px;
+    min-width: 1600px;
     table-layout: fixed;
 }
 
@@ -74,7 +80,11 @@
 }
 
 .ocorrencias-table .coluna-acoes-tomadas {
-    width: 210px;
+    width: 230px;
+}
+
+.ocorrencias-table .coluna-status {
+    width: 155px;
 }
 
 .texto-compacto {
