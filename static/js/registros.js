@@ -214,9 +214,9 @@ function descricaoRetorno(registro) {
         : status === 'Nao retornou'
             ? 'bg-danger'
             : 'bg-info text-dark';
-    const previsto = registro.aula_retorno_prevista ? `${registro.aula_retorno_prevista}ª aula` : '-';
-    const real = registro.aula_retorno_real ? `<div class="small text-muted">Voltou: ${registro.aula_retorno_real}ª aula</div>` : '';
-    return `<span class="badge ${classe}">${status}</span><div class="small">Previsto: ${previsto}</div>${real}`;
+    const previsto = registro.aula_retorno_prevista ? `${window.escapeHtml(registro.aula_retorno_prevista)}ª aula` : '-';
+    const real = registro.aula_retorno_real ? `<div class="small text-muted">Voltou: ${window.escapeHtml(registro.aula_retorno_real)}ª aula</div>` : '';
+    return `<span class="badge ${classe}">${window.escapeHtml(status)}</span><div class="small">Previsto: ${previsto}</div>${real}`;
 }
 
 function formatarDataRegistro(registro) {
@@ -266,7 +266,7 @@ function renderizarRegistros(lista) {
                 <td>${window.escapeHtml(getTurmaAluno(r.aluno_id))}</td>
                 <td>${badgeTipo}</td>
                 <td>${r.aula}ª aula</td>
-                <td>${window.escapeHtml(descricaoRetorno(r))}</td>
+                <td>${descricaoRetorno(r)}</td>
                 <td>${window.escapeHtml(r.motivo)}</td>
                 <td class="text-center">${documento}</td>
                 <td>${window.escapeHtml(r.observacoes || '-')}</td>
