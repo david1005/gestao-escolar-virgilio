@@ -13,7 +13,7 @@ async function carregarTudo() {
         fetch('/api/sistema/listas-operacionais').then(r => r.json()),
         fetch('/api/sistema/auditoria').then(r => r.json()),
         perfilAtual === 'admin' ? fetch('/api/sistema/backups').then(r => r.json()) : Promise.resolve([]),
-        fetch('/api/sistema/anexos').then(r => r.json()),
+        perfilAtual === 'admin' ? fetch('/api/sistema/anexos').then(r => r.json()) : Promise.resolve([]),
         fetch('/api/cursos/').then(r => r.json()),
         fetch('/api/turmas/').then(r => r.json())
     ]);
@@ -27,18 +27,13 @@ async function carregarTudo() {
     renderPermissoes();
     renderAuditoria(auditoria);
     renderBackups(backups);
-    renderAnexos(anexos);
+    if (perfilAtual === 'admin') renderAnexos(anexos);
     renderTurmasRelatorio();
     renderCursosTurmas();
 }
 
 function textoSeguro(valor) {
-    return String(valor ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    return window.escapeHtml(valor);
 }
 
 function renderConfig(cfg) {
@@ -118,8 +113,8 @@ function renderAnos(anos) {
         const botaoEncerrar = `<button class="btn btn-sm btn-outline-danger" onclick="encerrarAno(${a.id})" ${a.encerrado ? 'disabled' : ''}>Encerrar</button>`;
         return `
         <tr>
-            <td>${a.nome}</td>
-            <td>${a.data_inicio} ate ${a.data_fim}</td>
+            <td>${textoSeguro(a.nome)}</td>
+            <td>${textoSeguro(a.data_inicio)} ate ${textoSeguro(a.data_fim)}</td>
             <td>${status}</td>
             <td>${botaoAtivar}${botaoEncerrar}</td>
         </tr>
@@ -275,7 +270,7 @@ async function encerrarAno(id) {
 
 function renderPermissoes() {
     const select = document.getElementById('permissaoPerfil');
-    select.innerHTML = Object.keys(permissoes).map(p => `<option value="${p}">${p}</option>`).join('');
+    select.innerHTML = Object.keys(permissoes).map(p => `<option value="${textoSeguro(p)}">${textoSeguro(p)}</option>`).join('');
     renderPermissoesPerfil();
 }
 
@@ -315,10 +310,10 @@ function renderAuditoria(lista) {
     tbody.innerHTML = lista.map(l => `
         <tr>
             <td>${new Date(l.criado_em).toLocaleString('pt-BR')}</td>
-            <td>${l.usuario_nome || '-'}</td>
-            <td>${l.acao}</td>
-            <td>${l.entidade}${l.entidade_id ? ` #${l.entidade_id}` : ''}</td>
-            <td>${l.detalhes || '-'}</td>
+            <td>${textoSeguro(l.usuario_nome || '-')}</td>
+            <td>${textoSeguro(l.acao)}</td>
+            <td>${textoSeguro(l.entidade)}${l.entidade_id ? ` #${Number(l.entidade_id)}` : ''}</td>
+            <td>${textoSeguro(l.detalhes || '-')}</td>
         </tr>
     `).join('');
 }
@@ -344,7 +339,7 @@ function renderTurmasRelatorio() {
     const select = document.getElementById('relatorioTurma');
     select.innerHTML = '<option value="">Todas</option>' + turmas.map(t => {
         const curso = cursos.find(c => c.id === t.curso_id);
-        return `<option value="${t.id}">${t.ano}º ${t.letra} - ${curso ? curso.nome : ''}</option>`;
+        return `<option value="${t.id}">${t.ano}º ${textoSeguro(t.letra)} - ${textoSeguro(curso ? curso.nome : '')}</option>`;
     }).join('');
 }
 
@@ -550,18 +545,20 @@ function renderBackups(lista) {
     }
     tbody.innerHTML = lista.map(b => {
         const tipo = b.nome.startsWith('anexos_') ? 'Anexos' : (b.nome.endsWith('.sql') ? 'Banco SQL' : 'Banco JSON');
+        const nomeSeguro = textoSeguro(b.nome);
+        const url = `/api/sistema/backups/${encodeURIComponent(b.nome)}`;
         const botaoRestaurar = b.nome.startsWith('anexos_')
             ? ''
-            : `<button class="btn btn-sm btn-outline-danger" onclick="restaurarBackup('${textoSeguro(b.nome)}')">
+            : `<button class="btn btn-sm btn-outline-danger" data-backup-nome="${nomeSeguro}" onclick="restaurarBackup(this.dataset.backupNome)">
                     <i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar
                 </button>`;
         return `
         <tr>
-            <td>${b.nome}<div class="small text-muted">${tipo}</div></td>
+            <td>${nomeSeguro}<div class="small text-muted">${tipo}</div></td>
             <td>${formatarTamanho(b.tamanho)}</td>
             <td>${new Date(b.criado_em).toLocaleString('pt-BR')}</td>
             <td>
-                <a class="btn btn-sm btn-outline-success me-1" href="${b.url}"><i class="bi bi-download me-1"></i>Baixar</a>
+                <a class="btn btn-sm btn-outline-success me-1" href="${url}"><i class="bi bi-download me-1"></i>Baixar</a>
                 ${botaoRestaurar}
             </td>
         </tr>
@@ -674,15 +671,19 @@ function renderAnexos(lista) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum anexo enviado.</td></tr>';
         return;
     }
-    tbody.innerHTML = lista.map(a => `
+    tbody.innerHTML = lista.map(a => {
+        const anexoId = Number(a.id);
+        const url = `/api/sistema/anexos/${anexoId}/download`;
+        return `
         <tr>
-            <td><a href="${a.url}" target="_blank">${a.nome_original}</a></td>
-            <td>${a.entidade} #${a.entidade_id}</td>
-            <td>${a.enviado_por_nome || '-'}</td>
+            <td><a href="${url}" target="_blank" rel="noopener">${textoSeguro(a.nome_original)}</a></td>
+            <td>${textoSeguro(a.entidade)} #${Number(a.entidade_id)}</td>
+            <td>${textoSeguro(a.enviado_por_nome || '-')}</td>
             <td>${new Date(a.criado_em).toLocaleString('pt-BR')}</td>
-            <td><button class="btn btn-sm btn-outline-danger" onclick="excluirAnexo(${a.id})"><i class="bi bi-trash"></i></button></td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="excluirAnexo(${anexoId})"><i class="bi bi-trash"></i></button></td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 async function enviarAnexo() {

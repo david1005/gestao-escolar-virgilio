@@ -6,9 +6,10 @@ from app.models.registro import Registro
 from app.models.aluno import Aluno, Turma
 from app.schemas.registro import RegistroCreate, RegistroUpdate
 from app.schemas import registro as schemas
-from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
+from app.auth import exigir_acesso_aluno, get_curso_ids_usuario, get_usuario_atual, tem_permissao
 from app.models.usuario import Usuario
 from app.services.ano_letivo import obter_ano_letivo_ativo
+from app.services.notificacoes import notificar_edicao
 
 router = APIRouter()
 
@@ -25,17 +26,6 @@ def registrar_auditoria(db: Session, usuario: Usuario, acao: str, entidade: str,
         entidade_id=entidade_id,
         detalhes=detalhes,
     ))
-
-def usuario_pode_acessar_registro(db: Session, usuario: Usuario, registro: Registro):
-    aluno = db.query(Aluno).filter(Aluno.id == registro.aluno_id).first()
-    if not aluno:
-        return False
-    if usuario.perfil == "diretor_turma":
-        return aluno.turma_id == usuario.turma_id
-    if usuario.perfil == "coordenador":
-        turmas = db.query(Turma).filter(Turma.curso_id.in_(get_curso_ids_usuario(usuario))).all()
-        return aluno.turma_id in [t.id for t in turmas]
-    return True
 
 def eh_saida_antecipada(tipo: str | None):
     return tipo != "Atraso"
@@ -62,8 +52,9 @@ def normalizar_dados_retorno(registro: Registro):
 @router.post("/registros/", response_model=schemas.Registro)
 def criar_registro(registro: RegistroCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_registros(db, usuario)
+    exigir_acesso_aluno(db, usuario, registro.aluno_id)
     ano_letivo = obter_ano_letivo_ativo(db)
-    db_registro = Registro(**registro.model_dump(), ano_letivo_id=ano_letivo.id)
+    db_registro = Registro(**registro.model_dump(), ano_letivo_id=ano_letivo.id, criado_por_id=usuario.id)
     normalizar_dados_retorno(db_registro)
     db.add(db_registro)
     db.flush()
@@ -91,16 +82,7 @@ def listar_registros(db: Session = Depends(get_db), usuario: Usuario = Depends(g
 @router.get("/registros/aluno/{aluno_id}")
 def registros_por_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_registros(db, usuario)
-    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
-    if not aluno:
-        raise HTTPException(status_code=404, detail="Aluno nao encontrado")
-    if usuario.perfil == "diretor_turma" and aluno.turma_id != usuario.turma_id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
-    if usuario.perfil == "coordenador":
-        turmas = db.query(Turma).filter(Turma.curso_id.in_(get_curso_ids_usuario(usuario))).all()
-        turma_ids = [t.id for t in turmas]
-        if aluno.turma_id not in turma_ids:
-            raise HTTPException(status_code=403, detail="Acesso negado")
+    exigir_acesso_aluno(db, usuario, aluno_id)
     return db.query(Registro).filter(Registro.aluno_id == aluno_id).order_by(Registro.data.desc()).all()
 
 @router.put("/registros/{registro_id}")
@@ -109,8 +91,7 @@ def editar_registro(registro_id: int, dados: RegistroUpdate, db: Session = Depen
     registro = db.query(Registro).filter(Registro.id == registro_id).first()
     if not registro:
         raise HTTPException(status_code=404, detail="Registro não encontrado")
-    if not usuario_pode_acessar_registro(db, usuario, registro):
-        raise HTTPException(status_code=403, detail="Acesso negado")
+    exigir_acesso_aluno(db, usuario, registro.aluno_id)
     registro.tipo = dados.tipo
     registro.aula = dados.aula
     registro.aula_retorno_prevista = dados.aula_retorno_prevista
@@ -121,6 +102,7 @@ def editar_registro(registro_id: int, dados: RegistroUpdate, db: Session = Depen
     registro.tem_documento = dados.tem_documento
     registro.observacoes = dados.observacoes
     normalizar_dados_retorno(registro)
+    notificar_edicao(db, 'registro', registro, usuario)
     registrar_auditoria(db, usuario, "editou", "registro", registro.id, f"aluno_id={registro.aluno_id}; tipo={registro.tipo}")
     db.commit()
     db.refresh(registro)
@@ -132,8 +114,7 @@ def confirmar_retorno(registro_id: int, aula_retorno_real: int, db: Session = De
     registro = db.query(Registro).filter(Registro.id == registro_id).first()
     if not registro:
         raise HTTPException(status_code=404, detail="Registro nao encontrado")
-    if not usuario_pode_acessar_registro(db, usuario, registro):
-        raise HTTPException(status_code=403, detail="Acesso negado")
+    exigir_acesso_aluno(db, usuario, registro.aluno_id)
     if not eh_saida_antecipada(registro.tipo) or registro.tipo_saida != "temporaria":
         raise HTTPException(status_code=400, detail="Este registro nao possui retorno previsto")
     registro.aula_retorno_real = aula_retorno_real
@@ -149,8 +130,7 @@ def excluir_registro(registro_id: int, db: Session = Depends(get_db), usuario: U
     registro = db.query(Registro).filter(Registro.id == registro_id).first()
     if not registro:
         raise HTTPException(status_code=404, detail="Registro não encontrado")
-    if not usuario_pode_acessar_registro(db, usuario, registro):
-        raise HTTPException(status_code=403, detail="Acesso negado")
+    exigir_acesso_aluno(db, usuario, registro.aluno_id)
     registrar_auditoria(db, usuario, "excluiu", "registro", registro.id, f"aluno_id={registro.aluno_id}; tipo={registro.tipo}")
     db.delete(registro)
     db.commit()

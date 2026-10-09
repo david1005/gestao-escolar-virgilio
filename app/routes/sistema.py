@@ -5,6 +5,7 @@ import subprocess
 import uuid
 import zipfile
 from datetime import date, datetime
+from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,7 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import get_usuario_atual, tem_permissao
+from app.auth import exigir_acesso_aluno, get_usuario_atual, tem_permissao
 from app.database import get_db
 from app.models.aluno import Aluno, Curso, Turma
 from app.models.auditoria import Auditoria
@@ -123,17 +124,48 @@ def exigir_configuracoes(db: Session, usuario: Usuario):
         raise HTTPException(status_code=403, detail="Acesso negado")
 
 
-def exigir_anexo(db: Session, usuario: Usuario, entidade: str | None = None):
-    if tem_permissao(db, usuario, "configuracoes"):
+def texto_html_seguro(valor) -> str:
+    return escape(str(valor if valor is not None else ""), quote=True)
+
+
+def exigir_acesso_anexo(
+    db: Session,
+    usuario: Usuario,
+    entidade: str | None = None,
+    entidade_id: int | None = None,
+):
+    if entidade is None and entidade_id is None:
+        exigir_admin(usuario)
         return
+
+    if not entidade or entidade_id is None:
+        raise HTTPException(status_code=400, detail="Informe a entidade e o identificador do anexo")
+
     modulo_por_entidade = {
         "aluno": "alunos",
         "registro": "registros",
         "ocorrencia": "ocorrencias",
     }
-    modulo = modulo_por_entidade.get(entidade or "")
-    if not modulo or not tem_permissao(db, usuario, modulo):
+    modulo = modulo_por_entidade.get(entidade)
+    if not modulo:
+        raise HTTPException(status_code=400, detail="Entidade de anexo invalida")
+    if not tem_permissao(db, usuario, modulo):
         raise HTTPException(status_code=403, detail="Acesso negado")
+
+    if entidade == "aluno":
+        aluno_id = entidade_id
+    elif entidade == "registro":
+        registro = db.query(Registro).filter(Registro.id == entidade_id).first()
+        if not registro:
+            raise HTTPException(status_code=404, detail="Registro nao encontrado")
+        aluno_id = registro.aluno_id
+    else:
+        ocorrencia = db.query(Ocorrencia).filter(Ocorrencia.id == entidade_id).first()
+        if not ocorrencia:
+            raise HTTPException(status_code=404, detail="Ocorrencia nao encontrada")
+        aluno_id = ocorrencia.aluno_id
+
+    exigir_acesso_aluno(db, usuario, aluno_id)
 
 
 def registrar_auditoria_sistema(db: Session, usuario: Usuario, acao: str, entidade: str, entidade_id: int | None = None, detalhes: str | None = None, request: Request | None = None):
@@ -697,7 +729,7 @@ def restaurar_backup(nome: str, dados: RestaurarBackupRequest, request: Request,
 
 @router.get("/sistema/anexos")
 def listar_anexos(entidade: str | None = None, entidade_id: int | None = None, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
-    exigir_anexo(db, usuario, entidade)
+    exigir_acesso_anexo(db, usuario, entidade, entidade_id)
     query = db.query(Anexo)
     if entidade:
         query = query.filter(Anexo.entidade == entidade)
@@ -730,7 +762,7 @@ async def enviar_anexo(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_usuario_atual),
 ):
-    exigir_anexo(db, usuario, entidade)
+    exigir_acesso_anexo(db, usuario, entidade, entidade_id)
     extensao = Path(arquivo.filename or "arquivo").suffix.lower()
     if extensao not in EXTENSOES_ANEXO_PERMITIDAS:
         raise HTTPException(status_code=400, detail="Tipo de arquivo nao permitido")
@@ -769,7 +801,7 @@ def baixar_anexo(anexo_id: int, request: Request, db: Session = Depends(get_db),
     anexo = db.query(Anexo).filter(Anexo.id == anexo_id).first()
     if not anexo:
         raise HTTPException(status_code=404, detail="Anexo nao encontrado")
-    exigir_anexo(db, usuario, anexo.entidade)
+    exigir_acesso_anexo(db, usuario, anexo.entidade, anexo.entidade_id)
     caminho = caminho_anexo_seguro(anexo)
     if not caminho:
         raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
@@ -783,7 +815,7 @@ def excluir_anexo(anexo_id: int, request: Request, db: Session = Depends(get_db)
     anexo = db.query(Anexo).filter(Anexo.id == anexo_id).first()
     if not anexo:
         raise HTTPException(status_code=404, detail="Anexo nao encontrado")
-    exigir_anexo(db, usuario, anexo.entidade)
+    exigir_acesso_anexo(db, usuario, anexo.entidade, anexo.entidade_id)
     caminho = caminho_anexo_seguro(anexo)
     if caminho:
         caminho.unlink()
@@ -846,18 +878,18 @@ def relatorio_oficial(
     ]
     numero_documento = f"REL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     tabela = "".join(
-        f"<tr><td class='num'>{indice}</td>" + "".join(f"<td>{col}</td>" for col in linha) + "</tr>"
+        f"<tr><td class='num'>{indice}</td>" + "".join(f"<td>{texto_html_seguro(col)}</td>" for col in linha) + "</tr>"
         for indice, linha in enumerate(linhas, start=1)
     )
-    head = "<th class='num'>#</th>" + "".join(f"<th>{col}</th>" for col in cabecalho)
-    filtros_html = "".join(f"<span>{item}</span>" for item in filtros_usados)
+    head = "<th class='num'>#</th>" + "".join(f"<th>{texto_html_seguro(col)}</th>" for col in cabecalho)
+    filtros_html = "".join(f"<span>{texto_html_seguro(item)}</span>" for item in filtros_usados)
     logo_url = "/static/img/logo-escola.png"
     return f"""
     <!doctype html>
     <html lang="pt-BR">
     <head>
         <meta charset="utf-8">
-        <title>{titulo}</title>
+        <title>{texto_html_seguro(titulo)}</title>
         <style>
             @page {{ size: A4; margin: 14mm; }}
             body {{ font-family: Arial, sans-serif; color: #111; margin: 0; font-size: 12px; }}
@@ -889,9 +921,9 @@ def relatorio_oficial(
         <div class="topo">
             <img class="logo" src="{logo_url}" onerror="this.style.display='none'">
             <div class="cabecalho">
-                <h1>{config.get("escola_nome", "")}</h1>
-                <div class="sub">{config.get("escola_endereco", "")}</div>
-                <h2>{titulo}</h2>
+                <h1>{texto_html_seguro(config.get("escola_nome", ""))}</h1>
+                <div class="sub">{texto_html_seguro(config.get("escola_endereco", ""))}</div>
+                <h2>{texto_html_seguro(titulo)}</h2>
             </div>
         </div>
         <div class="documento">Documento {numero_documento} | Emitido em {datetime.now().strftime("%d/%m/%Y %H:%M")}</div>

@@ -52,7 +52,7 @@ function atualizarListaMotivos() {
     const motivos = motivosPorTipo[tipo] || motivosPorTipo['Atraso'];
 
     select.innerHTML = '<option value="">Selecione um motivo...</option>' +
-        motivos.map(motivo => `<option value="${motivo}">${motivo}</option>`).join('') +
+        motivos.map(motivo => `<option value="${window.escapeHtml(motivo)}">${window.escapeHtml(motivo)}</option>`).join('') +
         '<option value="outro">Outro motivo...</option>';
 
     atualizarMotivo();
@@ -92,7 +92,15 @@ async function carregarDados() {
     renderizarResumoRegistros();
     registrosFiltrados = registros;
     paginaAtualRegistros = 1;
+    const destino = Number(new URLSearchParams(window.location.search).get('notificacao'));
+    const indice = registros.findIndex(r => r.id === destino);
+    if (indice >= 0) paginaAtualRegistros = Math.floor(indice / Number(document.getElementById('itensPorPagina').value)) + 1;
     renderizarRegistros(registrosFiltrados);
+    if (indice >= 0) {
+        const linha = document.getElementById(`registro-${destino}`);
+        linha?.classList.add('table-active');
+        linha?.scrollIntoView({block: 'center'});
+    }
 }
 
 function preencherFiltroTurmas() {
@@ -106,7 +114,7 @@ function preencherFiltroTurmas() {
         .sort((a, b) => a.ano - b.ano || String(a.letra).localeCompare(String(b.letra)))
         .forEach(turma => {
             const curso = cursos.find(c => c.id === turma.curso_id);
-            filtro.innerHTML += `<option value="${turma.id}">${turma.ano}\u00ba ${turma.letra} - ${curso ? curso.nome : ''}</option>`;
+            filtro.innerHTML += `<option value="${turma.id}">${turma.ano}\u00ba ${window.escapeHtml(turma.letra)} - ${window.escapeHtml(curso ? curso.nome : '')}</option>`;
         });
 
     filtro.value = valorAtual;
@@ -154,8 +162,8 @@ function ehSaidaAntecipada(tipo) {
 function montarItemAluno(a, origem) {
     return `
         <button type="button" class="list-group-item list-group-item-action sugestao-aluno" data-aluno-id="${a.id}" data-origem="${origem}">
-            <div class="fw-semibold">${a.nome}</div>
-            <div class="small text-muted">${getTurmaAluno(a.id)} - Matricula ${a.matricula}</div>
+            <div class="fw-semibold">${window.escapeHtml(a.nome)}</div>
+            <div class="small text-muted">${window.escapeHtml(getTurmaAluno(a.id))} - Matricula ${window.escapeHtml(a.matricula)}</div>
         </button>
     `;
 }
@@ -252,16 +260,16 @@ function renderizarRegistros(lista) {
             : '';
 
         return `
-            <tr>
+            <tr id="registro-${r.id}">
                 <td>${formatarDataRegistro(r)}</td>
-                <td>${getNomeAluno(r.aluno_id)}</td>
-                <td>${getTurmaAluno(r.aluno_id)}</td>
+                <td>${window.escapeHtml(getNomeAluno(r.aluno_id))}</td>
+                <td>${window.escapeHtml(getTurmaAluno(r.aluno_id))}</td>
                 <td>${badgeTipo}</td>
                 <td>${r.aula}ª aula</td>
-                <td>${descricaoRetorno(r)}</td>
-                <td>${r.motivo}</td>
+                <td>${window.escapeHtml(descricaoRetorno(r))}</td>
+                <td>${window.escapeHtml(r.motivo)}</td>
                 <td class="text-center">${documento}</td>
-                <td>${r.observacoes || '-'}</td>
+                <td>${window.escapeHtml(r.observacoes || '-')}</td>
                 <td>
     ${perfilUsuario === 'admin' || perfilUsuario === 'ppdt' || perfilUsuario === 'biblioteca' ? `
     ${botaoConfirmarRetorno}
@@ -559,15 +567,15 @@ function imprimirAutorizacao(id) {
                 <div class="linha"></div>
                 <div class="campo"><strong>Data:</strong> ${data}</div>
                 <div class="campo"><strong>Hora:</strong> ${hora}</div>
-                <div class="campo"><strong>Aluno:</strong> ${nomeAluno}</div>
-                <div class="campo"><strong>Matricula:</strong> ${matricula}</div>
-                <div class="campo"><strong>Turma:</strong> ${turma}</div>
-                <div class="campo"><strong>Tipo:</strong> ${registro.tipo}</div>
+                <div class="campo"><strong>Aluno:</strong> ${window.escapeHtml(nomeAluno)}</div>
+                <div class="campo"><strong>Matricula:</strong> ${window.escapeHtml(matricula)}</div>
+                <div class="campo"><strong>Turma:</strong> ${window.escapeHtml(turma)}</div>
+                <div class="campo"><strong>Tipo:</strong> ${window.escapeHtml(registro.tipo)}</div>
                 <div class="campo"><strong>Aula:</strong> ${registro.aula}ª aula</div>
-                ${retornoTexto ? `<div class="campo"><strong>Retorno:</strong> ${retornoTexto}</div>` : ''}
-                <div class="campo"><strong>Motivo:</strong> ${registro.motivo}</div>
+                ${retornoTexto ? `<div class="campo"><strong>Retorno:</strong> ${window.escapeHtml(retornoTexto)}</div>` : ''}
+                <div class="campo"><strong>Motivo:</strong> ${window.escapeHtml(registro.motivo)}</div>
                 <div class="campo"><strong>Documento:</strong> ${registro.tem_documento ? 'Sim' : 'Não'}</div>
-                ${registro.observacoes ? `<div class="campo"><strong>Obs.:</strong> ${registro.observacoes}</div>` : ''}
+                ${registro.observacoes ? `<div class="campo"><strong>Obs.:</strong> ${window.escapeHtml(registro.observacoes)}</div>` : ''}
                 <div class="linha"></div>
                 <div class="texto">${textoPrincipal}</div>
                 <div class="assinatura">

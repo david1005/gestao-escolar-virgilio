@@ -11,11 +11,15 @@ from app.routes import ocorrencia as ocorrencia_routes
 from app.routes import dashboard as dashboard_routes
 from app.routes import auth as auth_routes
 from app.routes import sistema as sistema_routes
+from app.routes import notificacoes as notificacoes_routes
+from app.models import notificacao
+from app.services.migracao_notificacoes import migrar_criadores
 from app.auth import get_usuario_atual, tem_permissao, hash_senha
+from app.config import EM_PRODUCAO, obter_admin_inicial
+from app.security import aplicar_cabecalhos_seguranca, configuracao_documentacao
 from app.models.usuario import Usuario
 from app.database import SessionLocal
 from datetime import date
-import os
 
 Base.metadata.create_all(bind=engine)
 
@@ -78,6 +82,7 @@ def garantir_colunas_auditoria():
                 conn.execute(text(comando))
 
 garantir_colunas_auditoria()
+migrar_criadores(engine)
 
 def garantir_colunas_ciclo_ano_letivo():
     inspector = inspect(engine)
@@ -173,11 +178,7 @@ def garantir_admin_inicial():
     try:
         if db.query(Usuario).count() > 0:
             return
-        email = os.getenv("ADMIN_EMAIL", "admin@teste.com")
-        senha = os.getenv("ADMIN_PASSWORD", "Admin1234")
-        if len(senha.encode("utf-8")) > 72:
-            senha = senha.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-        nome = os.getenv("ADMIN_NAME", "Administrador")
+        email, senha, nome = obter_admin_inicial()
         db.add(Usuario(
             nome=nome,
             email=email,
@@ -191,7 +192,18 @@ def garantir_admin_inicial():
 
 garantir_admin_inicial()
 
-app = FastAPI(title="Sistema de Gestão Escolar")
+app = FastAPI(
+    title="Sistema de Gestão Escolar",
+    **configuracao_documentacao(EM_PRODUCAO),
+)
+
+
+@app.middleware("http")
+async def adicionar_cabecalhos_seguranca(request: Request, call_next):
+    response = await call_next(request)
+    aplicar_cabecalhos_seguranca(response, EM_PRODUCAO, request.url.path)
+    return response
+
 
 @app.middleware("http")
 async def proteger_csrf(request: Request, call_next):
@@ -201,7 +213,9 @@ async def proteger_csrf(request: Request, call_next):
         csrf_cookie = request.cookies.get("csrf_token")
         csrf_header = request.headers.get("x-csrf-token")
         if not csrf_cookie or csrf_cookie != csrf_header:
-            return JSONResponse({"detail": "Token de seguranca invalido"}, status_code=403)
+            response = JSONResponse({"detail": "Token de seguranca invalido"}, status_code=403)
+            aplicar_cabecalhos_seguranca(response, EM_PRODUCAO, request.url.path)
+            return response
     return await call_next(request)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -213,14 +227,19 @@ app.include_router(ocorrencia_routes.router, prefix="/api", tags=["Ocorrências"
 app.include_router(dashboard_routes.router, prefix="/api", tags=["Dashboard"])
 app.include_router(auth_routes.router, prefix="/api", tags=["Auth"])
 app.include_router(sistema_routes.router, prefix="/api", tags=["Sistema"])
+app.include_router(notificacoes_routes.router, prefix="/api", tags=["Notificacoes"])
 
 def get_usuario_logado(request: Request):
+    db = None
     try:
         from app.database import SessionLocal
         db = SessionLocal()
         return get_usuario_atual(request, db)
     except:
         return None
+    finally:
+        if db:
+            db.close()
 
 def pode_acessar(usuario: Usuario, modulo: str):
     db = None
@@ -265,6 +284,13 @@ async def pagina_manual(request: Request):
     if not usuario:
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(request, "manual.html", contexto_usuario(usuario))
+
+@app.get('/notificacoes')
+async def pagina_notificacoes(request: Request):
+    usuario = get_usuario_logado(request)
+    if not usuario:
+        return RedirectResponse(url='/login')
+    return templates.TemplateResponse(request, 'notificacoes.html', contexto_usuario(usuario))
 
 @app.get("/alunos")
 async def pagina_alunos(request: Request):

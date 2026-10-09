@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta
 import json
-import os
 import re
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.config import SECRET_KEY
+from app.models.aluno import Aluno, Turma
 from app.models.usuario import Usuario
 from app.models.sistema import PermissaoPerfil
 
@@ -19,7 +21,6 @@ PERMISSOES_PADRAO = {
     "diretor_turma": ["alunos", "registros", "ocorrencias", "dashboard", "relatorios"],
 }
 
-SECRET_KEY = os.getenv("SECRET_KEY", "troque_esta_chave_em_producao")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hora
 
@@ -57,7 +58,7 @@ def get_usuario_atual(request: Request, db: Session = Depends(get_db)):
         email = payload.get("sub")
         if not email:
             raise HTTPException(status_code=401, detail="Token inválido")
-    except JWTError:
+    except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
     usuario = db.query(Usuario).filter(Usuario.email == email).first()
@@ -87,6 +88,26 @@ def get_curso_ids_usuario(usuario: Usuario) -> list[int]:
     if usuario.curso_id and usuario.curso_id not in ids:
         ids.append(usuario.curso_id)
     return ids
+
+def usuario_pode_acessar_aluno(db: Session, usuario: Usuario, aluno: Aluno) -> bool:
+    if usuario.perfil == "diretor_turma":
+        return aluno.turma_id == usuario.turma_id
+    if usuario.perfil == "coordenador":
+        curso_ids = get_curso_ids_usuario(usuario)
+        turma = db.query(Turma).filter(
+            Turma.id == aluno.turma_id,
+            Turma.curso_id.in_(curso_ids),
+        ).first()
+        return turma is not None
+    return True
+
+def exigir_acesso_aluno(db: Session, usuario: Usuario, aluno_id: int) -> Aluno:
+    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    if not aluno:
+        raise HTTPException(status_code=404, detail="Aluno nao encontrado")
+    if not usuario_pode_acessar_aluno(db, usuario, aluno):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    return aluno
 
 def tem_permissao(db: Session, usuario: Usuario, modulo: str) -> bool:
     if usuario.perfil == "admin":

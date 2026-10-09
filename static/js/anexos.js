@@ -60,21 +60,25 @@ async function carregarAnexosContexto() {
         return;
     }
 
-    tbody.innerHTML = anexos.map(anexo => `
+    tbody.innerHTML = anexos.map(anexo => {
+        const anexoId = Number(anexo.id);
+        const url = `/api/sistema/anexos/${anexoId}/download`;
+        return `
         <tr>
-            <td><a href="${anexo.url}" target="_blank"><i class="bi bi-file-earmark me-1"></i>${anexo.nome_original}</a></td>
-            <td>${anexo.enviado_por_nome || '-'}</td>
+            <td><a href="${url}" target="_blank" rel="noopener"><i class="bi bi-file-earmark me-1"></i>${window.escapeHtml(anexo.nome_original)}</a></td>
+            <td>${window.escapeHtml(anexo.enviado_por_nome || '-')}</td>
             <td>${formatarDataAnexo(anexo.criado_em)}</td>
             <td>
-                <a class="btn btn-sm btn-outline-success me-1" href="${anexo.url}" target="_blank" title="Abrir">
+                <a class="btn btn-sm btn-outline-success me-1" href="${url}" target="_blank" rel="noopener" title="Abrir">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </a>
-                <button class="btn btn-sm btn-outline-danger" onclick="excluirAnexoContexto(${anexo.id})" title="Excluir">
+                <button class="btn btn-sm btn-outline-danger" onclick="excluirAnexoContexto(${anexoId})" title="Excluir">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 async function abrirAnexos(entidade, entidadeId, titulo) {

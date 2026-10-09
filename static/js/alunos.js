@@ -53,8 +53,8 @@ function preencherSelectCursos() {
     importCurso.innerHTML = '<option value="">Selecione o curso</option>';
 
     cursos.forEach(curso => {
-        filtroCurso.innerHTML += `<option value="${curso.id}">${curso.nome}</option>`;
-        importCurso.innerHTML += `<option value="${curso.id}">${curso.nome}</option>`;
+        filtroCurso.innerHTML += `<option value="${curso.id}">${window.escapeHtml(curso.nome)}</option>`;
+        importCurso.innerHTML += `<option value="${curso.id}">${window.escapeHtml(curso.nome)}</option>`;
     });
 
     filtroCurso.value = valorAtual;
@@ -77,8 +77,8 @@ function preencherSelectTurmas() {
         const curso = cursos.find(c => c.id === t.curso_id);
         const label = formatarTurma(t, curso);
 
-        select.innerHTML += `<option value="${t.id}">${label}</option>`;
-        filtro.innerHTML += `<option value="${t.id}">${label}</option>`;
+        select.innerHTML += `<option value="${t.id}">${window.escapeHtml(label)}</option>`;
+        filtro.innerHTML += `<option value="${t.id}">${window.escapeHtml(label)}</option>`;
     });
 }
 
@@ -125,12 +125,12 @@ function renderizarAlunos(alunos) {
         return `
             <tr>
                 <td>${numeroLinha}</td>
-                <td>${a.nome}</td>
-                <td>${a.matricula}</td>
-                <td>${turmaLabel}</td>
+                <td>${window.escapeHtml(a.nome)}</td>
+                <td>${window.escapeHtml(a.matricula)}</td>
+                <td>${window.escapeHtml(turmaLabel)}</td>
                 <td>${formatarStatus(a.status)}</td>
-                <td>${a.responsavel}</td>
-                <td>${a.contato_responsavel}</td>
+                <td>${window.escapeHtml(a.responsavel)}</td>
+                <td>${window.escapeHtml(a.contato_responsavel)}</td>
             <td>
     <a href="/aluno/${a.id}" class="btn btn-sm btn-outline-primary me-1" title="Ver aluno">
         <i class="bi bi-person"></i>
@@ -182,7 +182,7 @@ function formatarStatus(status) {
         desistente: ['Desistente', 'bg-danger']
     };
     const [texto, classe] = labels[status] || [status || 'Ativo', 'bg-success'];
-    return `<span class="badge ${classe}">${texto}</span>`;
+    return `<span class="badge ${classe}">${window.escapeHtml(texto)}</span>`;
 }
 
 function abrirEdicaoAluno(id) {
@@ -469,12 +469,7 @@ abrirModalImportacao = function () {
 };
 
 function textoImportacaoSeguro(valor) {
-    return String(valor ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    return window.escapeHtml(valor);
 }
 
 function montarFormImportacao() {

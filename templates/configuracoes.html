@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuracões | Gestão Escolar</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/vendor/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
     <script src="/static/js/theme.js?v=1"></script>
-    <script src="/static/js/security.js?v=1"></script>
+    <script src="/static/js/security.js?v=2"></script>
+    <link href="/static/css/notificacoes.css?v=1" rel="stylesheet">
+    <script src="/static/js/notificacoes.js?v=1" defer></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -66,8 +68,8 @@
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRelatorios">Relatórios PDF</button></li>
             {% if perfil == 'admin' %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBackup">Backup</button></li>
-            {% endif %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabAnexos">Anexos</button></li>
+            {% endif %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabAuditoria">Auditoria</button></li>
         </ul>
 
@@ -328,6 +330,7 @@
             </div>
             {% endif %}
 
+            {% if perfil == 'admin' %}
             <div class="tab-pane fade" id="tabAnexos">
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-1"></i>
@@ -337,6 +340,7 @@
                     <table class="table table-hover mb-0"><thead class="table-light"><tr><th>Arquivo</th><th>Entidade</th><th>Enviado por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="listaAnexos"></tbody></table>
                 </div></div>
             </div>
+            {% endif %}
 
             <div class="tab-pane fade" id="tabAuditoria">
                 <div class="card shadow-sm mb-3">
@@ -461,9 +465,9 @@
     </div>
     {% endif %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script>window.perfilAtual = "{{ perfil }}";</script>
-    <script src="/static/js/configuracoes.js?v=13"></script>
+    <script src="/static/js/configuracoes.js?v=15"></script>
     <script>
         async function logout() {
             await fetch('/api/auth/logout', { method: 'POST' });

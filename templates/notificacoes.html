@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notificações | Gestão Escolar</title>
+    <link href="/static/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/vendor/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/style.css?v=4" rel="stylesheet">
+    <link href="/static/css/notificacoes.css?v=1" rel="stylesheet">
+    <script src="/static/js/theme.js?v=1"></script>
+    <script src="/static/js/security.js?v=2"></script>
+    <script src="/static/js/notificacoes.js?v=1" defer></script>
+</head>
+<body>
+    {% include 'partials/navbar.html' %}
+    <main class="container my-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <h4 class="fw-bold mb-0"><i class="bi bi-bell me-2"></i>Notificações</h4>
+            <button class="btn btn-outline-primary" type="button" data-ler-todas><i class="bi bi-check2-all me-2"></i>Marcar todas como lidas</button>
+        </div>
+        <div class="d-flex flex-wrap gap-3 mb-4">
+            <select id="filtroLeitura" class="form-select w-auto" aria-label="Estado de leitura">
+                <option value="todas">Todas</option><option value="nao_lidas">Não lidas</option><option value="lidas">Lidas</option>
+            </select>
+            <select id="filtroTipoNotificacao" class="form-select w-auto" aria-label="Tipo de notificação">
+                <option value="">Todos os tipos</option><option value="ocorrencia_antiga">Ocorrências pendentes</option>
+                <option value="retorno_pendente">Retornos pendentes</option><option value="alteracao">Alterações</option><option value="seguranca">Segurança</option>
+            </select>
+        </div>
+        <div id="listaNotificacoes" class="notificacoes-lista" aria-live="polite"><p class="text-muted py-4">Carregando...</p></div>
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <span id="paginaNotificacoes" class="small text-muted"></span>
+            <div class="d-flex gap-2">
+                <button id="anteriorNotificacoes" class="btn btn-outline-secondary" title="Página anterior" aria-label="Página anterior"><i class="bi bi-chevron-left"></i></button>
+                <button id="proximaNotificacoes" class="btn btn-outline-secondary" title="Próxima página" aria-label="Próxima página"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+    </main>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

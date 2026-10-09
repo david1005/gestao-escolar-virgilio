@@ -34,7 +34,7 @@ function preencherOptions(id, lista, manterValor = true) {
     const select = document.getElementById(id);
     if (!select || !lista.length) return;
     const valorAtual = select.value;
-    select.innerHTML = lista.map(item => `<option value="${item}">${item}</option>`).join('');
+    select.innerHTML = lista.map(item => `<option value="${window.escapeHtml(item)}">${window.escapeHtml(item)}</option>`).join('');
     if (manterValor && lista.includes(valorAtual)) select.value = valorAtual;
 }
 
@@ -64,7 +64,15 @@ async function carregarDados() {
     renderizarResumo();
     ocorrenciasFiltradas = ocorrencias;
     paginaAtualOcorrencias = 1;
+    const destino = Number(new URLSearchParams(window.location.search).get('notificacao'));
+    const indice = ocorrencias.findIndex(o => o.id === destino);
+    if (indice >= 0) paginaAtualOcorrencias = Math.floor(indice / Number(document.getElementById('itensPorPagina').value)) + 1;
     renderizarOcorrencias(ocorrenciasFiltradas);
+    if (indice >= 0) {
+        const linha = document.getElementById(`ocorrencia-${destino}`);
+        linha?.classList.add('table-active');
+        linha?.scrollIntoView({block: 'center'});
+    }
 }
 
 function normalizarTexto(texto) {
@@ -102,7 +110,7 @@ function preencherFiltroTurmas() {
         .sort((a, b) => a.ano - b.ano || String(a.letra).localeCompare(String(b.letra)))
         .forEach(turma => {
             const curso = cursos.find(c => c.id === turma.curso_id);
-            filtro.innerHTML += `<option value="${turma.id}">${turma.ano}\u00ba ${turma.letra} - ${curso ? curso.nome : ''}</option>`;
+            filtro.innerHTML += `<option value="${turma.id}">${turma.ano}\u00ba ${window.escapeHtml(turma.letra)} - ${window.escapeHtml(curso ? curso.nome : '')}</option>`;
         });
 
     filtro.value = valorAtual;
@@ -143,9 +151,7 @@ function getStatusBadge(status) {
 }
 
 function escaparHtml(valor) {
-    const div = document.createElement('div');
-    div.textContent = String(valor || '');
-    return div.innerHTML;
+    return window.escapeHtml(valor);
 }
 
 function montarTextoCompacto(valor, ocorrenciaId, campo, titulo) {
@@ -201,16 +207,16 @@ function renderizarOcorrencias(lista) {
             ? '<i class="bi bi-check-circle-fill text-success"></i>'
             : '<i class="bi bi-x-circle-fill text-danger"></i>';
         const logEdicao = o.editado_por
-            ? `<br><small class="text-muted"><i class="bi bi-pencil me-1"></i>Editado por ${o.editado_por} em ${new Date(o.editado_em).toLocaleString('pt-BR')}</small>`
+            ? `<br><small class="text-muted"><i class="bi bi-pencil me-1"></i>Editado por ${escaparHtml(o.editado_por)} em ${new Date(o.editado_em).toLocaleString('pt-BR')}</small>`
             : '';
 
         return `
-            <tr>
+            <tr id="ocorrencia-${o.id}">
                 <td>${o.data}</td>
-                <td>${getNomeAluno(o.aluno_id)}${logEdicao}</td>
-                <td>${getTurmaAluno(o.aluno_id)}</td>
+                <td>${escaparHtml(getNomeAluno(o.aluno_id))}${logEdicao}</td>
+                <td>${escaparHtml(getTurmaAluno(o.aluno_id))}</td>
                 <td><span class="badge bg-dark">${o.numero_ocorrencia}\u00aa</span></td>
-                <td>${o.tipo}</td>
+                <td>${escaparHtml(o.tipo)}</td>
                 <td>${getGravidadeBadge(o.gravidade)}</td>
                 <td>${getStatusBadge(o.status)}</td>
                 <td class="coluna-texto">${montarTextoCompacto(o.descricao, o.id, 'descricao', 'descrição')}</td>
@@ -261,8 +267,8 @@ function mudarPaginaOcorrencias(direcao) {
 function montarItemAluno(aluno, origem) {
     return `
         <button type="button" class="list-group-item list-group-item-action sugestao-aluno" data-aluno-id="${aluno.id}" data-origem="${origem}">
-            <div class="fw-semibold">${aluno.nome}</div>
-            <div class="small text-muted">${getTurmaAluno(aluno.id)} - Matricula ${aluno.matricula}</div>
+            <div class="fw-semibold">${escaparHtml(aluno.nome)}</div>
+            <div class="small text-muted">${escaparHtml(getTurmaAluno(aluno.id))} - Matricula ${escaparHtml(aluno.matricula)}</div>
         </button>
     `;
 }
@@ -334,17 +340,17 @@ async function selecionarAluno(id, nome) {
 
     if (total === 0) {
         alerta.className = 'alert alert-info';
-        alerta.innerHTML = `<i class="bi bi-info-circle me-2"></i>Este e o <strong>1\u00ba registro</strong> deste aluno. Medida sugerida: <strong>${medidasPadrao.registro}</strong>.`;
+        alerta.innerHTML = `<i class="bi bi-info-circle me-2"></i>Este e o <strong>1\u00ba registro</strong> deste aluno. Medida sugerida: <strong>${escaparHtml(medidasPadrao.registro)}</strong>.`;
         select.value = medidasPadrao.registro;
         gravidade.value = 'Leve';
     } else if (total === 1) {
         alerta.className = 'alert alert-warning';
-        alerta.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Este aluno ja tem <strong>${total} ocorrencia</strong>. Medida sugerida: <strong>${medidasPadrao.advertencia}</strong>.`;
+        alerta.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Este aluno ja tem <strong>${total} ocorrencia</strong>. Medida sugerida: <strong>${escaparHtml(medidasPadrao.advertencia)}</strong>.`;
         select.value = medidasPadrao.advertencia;
         gravidade.value = 'Media';
     } else {
         alerta.className = 'alert alert-danger';
-        alerta.innerHTML = `<i class="bi bi-x-octagon me-2"></i>Este aluno ja tem <strong>${total} ocorrencias</strong>. Medida sugerida: <strong>${medidasPadrao.suspensao}</strong>.`;
+        alerta.innerHTML = `<i class="bi bi-x-octagon me-2"></i>Este aluno ja tem <strong>${total} ocorrencias</strong>. Medida sugerida: <strong>${escaparHtml(medidasPadrao.suspensao)}</strong>.`;
         select.value = medidasPadrao.suspensao;
         gravidade.value = 'Grave';
     }
@@ -369,7 +375,6 @@ async function salvarOcorrencia() {
         gravidade: document.getElementById('gravidade').value,
         status: document.getElementById('status').value,
         acoes_tomadas: document.getElementById('acoes_tomadas').value,
-        registrado_por: document.getElementById('registrado_por').value,
         responsavel_notificado: document.getElementById('responsavel_notificado').checked,
         numero_ocorrencia: contagem.total + 1
     };
@@ -402,15 +407,11 @@ function abrirEdicao(id) {
     document.getElementById('editStatus').value = ocorrencia.status || 'Aberta';
     document.getElementById('editAcoesTomadas').value = ocorrencia.acoes_tomadas || '';
     document.getElementById('editResponsavelNotificado').checked = ocorrencia.responsavel_notificado;
-    document.getElementById('editadoPor').value = '';
 
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
 }
 
 async function salvarEdicao() {
-    const editadoPor = document.getElementById('editadoPor').value;
-    if (!editadoPor) { alert('Informe quem esta editando!'); return; }
-
     const dados = {
         tipo: document.getElementById('editTipo').value,
         descricao: document.getElementById('editDescricao').value,
@@ -418,8 +419,7 @@ async function salvarEdicao() {
         gravidade: document.getElementById('editGravidade').value,
         status: document.getElementById('editStatus').value,
         acoes_tomadas: document.getElementById('editAcoesTomadas').value,
-        responsavel_notificado: document.getElementById('editResponsavelNotificado').checked,
-        editado_por: editadoPor
+        responsavel_notificado: document.getElementById('editResponsavelNotificado').checked
     };
 
     const res = await fetch(`/api/ocorrencias/${ocorrenciaEditandoId}`, {
@@ -441,7 +441,7 @@ function gerarPDF(id) {
     const o = ocorrencias.find(o => o.id === id);
     if (!o) return;
 
-    const textoDocumento = (valor) => String(valor || '-')
+    const textoDocumento = (valor) => window.escapeHtml(String(valor || '-')
         .replaceAll('So registro', 'Só registro')
         .replaceAll('Advertencia', 'Advertência')
         .replaceAll('Notificacao', 'Notificação')
@@ -452,7 +452,7 @@ function gerarPDF(id) {
         .replaceAll('Informacoes', 'Informações')
         .replaceAll('Gestao', 'Gestão')
         .replaceAll('Educacao', 'Educação')
-        .replaceAll('Virgilio Tavora', 'Virgílio Távora');
+        .replaceAll('Virgilio Tavora', 'Virgílio Távora'));
 
     const nomeAluno = getNomeAluno(o.aluno_id);
     const turma = getTurmaAluno(o.aluno_id);
@@ -507,11 +507,11 @@ function gerarPDF(id) {
                 <div class="secao-titulo">1. Identificação do aluno</div>
                 <div class="grid">
                     <div class="campo"><span>Aluno:</span> ${textoDocumento(nomeAluno)}</div>
-                    <div class="campo"><span>Matricula:</span> ${matricula}</div>
+                    <div class="campo"><span>Matricula:</span> ${textoDocumento(matricula)}</div>
                     <div class="campo"><span>Turma:</span> ${textoDocumento(turma)}</div>
-                    <div class="campo"><span>Data da ocorrência:</span> ${o.data}</div>
+                    <div class="campo"><span>Data da ocorrência:</span> ${textoDocumento(o.data)}</div>
                     <div class="campo"><span>Responsável:</span> ${textoDocumento(responsavel)}</div>
-                    <div class="campo"><span>Contato:</span> ${contatoResponsavel}</div>
+                    <div class="campo"><span>Contato:</span> ${textoDocumento(contatoResponsavel)}</div>
                 </div>
             </div>
 
@@ -520,8 +520,8 @@ function gerarPDF(id) {
                 <div class="grid">
                     <div class="campo"><span>N\u00ba da ocorrência do aluno:</span> ${o.numero_ocorrencia}\u00aa ocorrência</div>
                     <div class="campo"><span>Tipo:</span> ${textoDocumento(o.tipo)}</div>
-                    <div class="campo"><span>Gravidade:</span> ${o.gravidade || 'Leve'}</div>
-                    <div class="campo"><span>Status:</span> ${o.status || 'Aberta'}</div>
+                    <div class="campo"><span>Gravidade:</span> ${textoDocumento(o.gravidade || 'Leve')}</div>
+                    <div class="campo"><span>Status:</span> ${textoDocumento(o.status || 'Aberta')}</div>
                     <div class="campo"><span>Registrado por:</span> ${textoDocumento(o.registrado_por)}</div>
                     <div class="campo"><span>Responsável notificado:</span> ${o.responsavel_notificado ? 'Sim' : 'Não'}</div>
                 </div>
@@ -542,7 +542,7 @@ function gerarPDF(id) {
                 </div>
             </div>
 
-            ${o.editado_por ? `<div class="log">* Editado por ${o.editado_por} em ${new Date(o.editado_em).toLocaleString('pt-BR')}</div>` : ''}
+            ${o.editado_por ? `<div class="log">* Editado por ${textoDocumento(o.editado_por)} em ${new Date(o.editado_em).toLocaleString('pt-BR')}</div>` : ''}
 
             <div class="assinaturas">
                 <div class="assinatura">
@@ -590,7 +590,6 @@ function limparFormulario() {
     document.getElementById('aluno_id').value = '';
     document.getElementById('descricao').value = '';
     document.getElementById('acoes_tomadas').value = '';
-    document.getElementById('registrado_por').value = '';
     document.getElementById('gravidade').value = 'Leve';
     document.getElementById('status').value = 'Aberta';
     document.getElementById('responsavel_notificado').checked = false;

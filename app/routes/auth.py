@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import datetime, timedelta
 import os
 import secrets
@@ -10,9 +11,9 @@ from app.models.usuario import Usuario
 from app.auth import verificar_senha, hash_senha, criar_token, get_usuario_atual, get_curso_ids_usuario, validar_senha_forte
 from pydantic import BaseModel
 from typing import Optional
+from app.services.login_seguro import verificar_bloqueio, falhar, limpar
 
 router = APIRouter()
-tentativas_login = {}
 MAX_TENTATIVAS_LOGIN = 5
 BLOQUEIO_LOGIN_MINUTOS = 10
 
@@ -77,39 +78,31 @@ def cookie_seguro(request: Request) -> bool:
         return True
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
 
-def chave_tentativa(request: Request, email: str):
-    ip = request.client.host if request.client else "desconhecido"
-    return f"{ip}:{email.lower().strip()}"
-
-def verificar_bloqueio_login(request: Request, email: str):
-    chave = chave_tentativa(request, email)
-    item = tentativas_login.get(chave)
-    if not item:
-        return
-    if datetime.now() >= item["bloqueado_ate"]:
-        tentativas_login.pop(chave, None)
-        return
-    raise HTTPException(status_code=429, detail="Muitas tentativas de login. Tente novamente em alguns minutos.")
-
-def registrar_falha_login(request: Request, email: str):
-    chave = chave_tentativa(request, email)
-    item = tentativas_login.get(chave, {"tentativas": 0, "bloqueado_ate": datetime.now()})
-    item["tentativas"] += 1
-    if item["tentativas"] >= MAX_TENTATIVAS_LOGIN:
-        item["bloqueado_ate"] = datetime.now() + timedelta(minutes=BLOQUEIO_LOGIN_MINUTOS)
-    tentativas_login[chave] = item
+def auditar_login(db, request, acao, usuario=None):
+    db.add(Auditoria(usuario_id=usuario.id if usuario else None,
+        usuario_nome=usuario.nome if usuario else None, acao=acao, entidade='autenticacao',
+        ip=request.client.host if request.client else 'desconhecido',
+        user_agent=request.headers.get('user-agent', '')[:512]))
 
 @router.post("/auth/login")
 def login(form: LoginForm, request: Request, response: Response, db: Session = Depends(get_db)):
-    verificar_bloqueio_login(request, form.email)
-    usuario = db.query(Usuario).filter(Usuario.email == form.email).first()
-    if not usuario or not verificar_senha(form.senha, usuario.senha_hash):
-        registrar_falha_login(request, form.email)
+    ip = request.client.host if request.client else 'desconhecido'
+    email = form.email.strip().lower()
+    try:
+        verificar_bloqueio(db, email, ip)
+    except HTTPException:
+        auditar_login(db, request, 'login_bloqueado')
+        db.commit()
+        raise
+    usuario = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
+    if not usuario or not usuario.ativo or not verificar_senha(form.senha, usuario.senha_hash):
+        falhar(db, email, ip)
+        auditar_login(db, request, 'login_negado')
+        db.commit()
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
-    if not usuario.ativo:
-        raise HTTPException(status_code=401, detail="Usuario inativo")
 
-    tentativas_login.pop(chave_tentativa(request, form.email), None)
+    limpar(db, email, ip)
+    auditar_login(db, request, 'login', usuario)
     usuario.ultimo_login = datetime.now()
     db.commit()
     token = criar_token({"sub": usuario.email})

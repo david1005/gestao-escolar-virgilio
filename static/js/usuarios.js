@@ -38,7 +38,7 @@ function preencherSelects() {
 
     const opcoesTurmas = turmas.map(t => {
         const curso = cursos.find(c => c.id === t.curso_id);
-        return `<option value="${t.id}">${t.ano}º ${t.letra} - ${curso ? curso.nome : ''}</option>`;
+        return `<option value="${t.id}">${t.ano}º ${window.escapeHtml(t.letra)} - ${window.escapeHtml(curso ? curso.nome : '')}</option>`;
     }).join('');
 
     document.getElementById('turma_id').innerHTML = opcoesTurmas;
@@ -50,7 +50,7 @@ function preencherCheckboxCursos(containerId) {
     container.innerHTML = cursos.map(c => `
         <div class="form-check">
             <input class="form-check-input" type="checkbox" value="${c.id}" id="${containerId}_${c.id}">
-            <label class="form-check-label" for="${containerId}_${c.id}">${c.nome}</label>
+            <label class="form-check-label" for="${containerId}_${c.id}">${window.escapeHtml(c.nome)}</label>
         </div>
     `).join('');
 }
@@ -63,7 +63,7 @@ function getPerfilLabel(perfil) {
         coordenador: '<span class="badge bg-warning text-dark">Coordenador</span>',
         diretor_turma: '<span class="badge bg-secondary">Diretor de Turma</span>'
     };
-    return labels[perfil] || perfil;
+    return labels[perfil] || window.escapeHtml(perfil);
 }
 
 function getCursoNome(id) {
@@ -82,11 +82,11 @@ function getAcessoLabel(usuario) {
     if (usuario.perfil === 'coordenador') {
         const ids = usuario.curso_ids || (usuario.curso_id ? [usuario.curso_id] : []);
         if (!ids.length) return '<span class="text-muted">Nenhum curso</span>';
-        return ids.map(id => `<span class="badge bg-light text-dark border me-1 mb-1">${getCursoNome(id)}</span>`).join('');
+        return ids.map(id => `<span class="badge bg-light text-dark border me-1 mb-1">${window.escapeHtml(getCursoNome(id))}</span>`).join('');
     }
 
     if (usuario.perfil === 'diretor_turma') {
-        return `<span class="badge bg-light text-dark border">${getTurmaNome(usuario.turma_id)}</span>`;
+        return `<span class="badge bg-light text-dark border">${window.escapeHtml(getTurmaNome(usuario.turma_id))}</span>`;
     }
 
     return '<span class="text-muted">Acesso geral</span>';
@@ -112,8 +112,8 @@ function renderizarUsuarios(lista) {
 
         return `
             <tr>
-                <td>${u.nome}</td>
-                <td>${u.email}</td>
+                <td>${window.escapeHtml(u.nome)}</td>
+                <td>${window.escapeHtml(u.email)}</td>
                 <td>
                     ${getPerfilLabel(u.perfil)}
                     <div class="small text-muted mt-1">${descricoesPerfil[u.perfil] || ''}</div>

@@ -42,7 +42,7 @@ function preencherFiltros(filtros) {
 
     const cursoSelect = document.getElementById('filtroCurso');
     cursoSelect.innerHTML = '<option value="">Todos</option>' +
-        filtros.cursos.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+        filtros.cursos.map(c => `<option value="${c.id}">${window.escapeHtml(c.nome)}</option>`).join('');
 
     preencherTurmas(filtros.turmas);
 
@@ -62,7 +62,7 @@ function preencherTurmas(turmas) {
         : turmas;
 
     turmaSelect.innerHTML = '<option value="">Todas</option>' +
-        filtradas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+        filtradas.map(t => `<option value="${t.id}">${window.escapeHtml(t.nome)}</option>`).join('');
     turmaSelect.value = filtradas.some(t => String(t.id) === turmaAtual) ? turmaAtual : '';
 }
 
@@ -151,7 +151,7 @@ function renderizarGraficos(data) {
 }
 
 function linkAluno(aluno) {
-    return `<a href="/aluno/${aluno.id}" class="text-decoration-none fw-semibold">${aluno.nome}</a>`;
+    return `<a href="/aluno/${aluno.id}" class="text-decoration-none fw-semibold">${window.escapeHtml(aluno.nome)}</a>`;
 }
 
 function renderRanking(tbodyId, lista, tipo) {
@@ -165,7 +165,7 @@ function renderRanking(tbodyId, lista, tipo) {
         tbody.innerHTML = lista.map(a => `
             <tr>
                 <td>${linkAluno(a)}</td>
-                <td>${a.turma}</td>
+                <td>${window.escapeHtml(a.turma)}</td>
                 <td><span class="badge bg-warning text-dark">${a.atrasos}</span></td>
                 <td><span class="badge bg-danger">${a.ocorrencias}</span></td>
                 <td><span class="badge bg-dark">${a.graves}</span></td>
@@ -178,7 +178,7 @@ function renderRanking(tbodyId, lista, tipo) {
         tbody.innerHTML = lista.map(a => `
             <tr>
                 <td>${linkAluno(a)}</td>
-                <td>${a.turma}</td>
+                <td>${window.escapeHtml(a.turma)}</td>
                 <td><span class="badge bg-warning text-dark">${a.abertas}</span></td>
                 <td><span class="badge bg-danger">${a.graves}</span></td>
                 <td><span class="badge bg-secondary">${a.ocorrencias}</span></td>
@@ -191,7 +191,7 @@ function renderRanking(tbodyId, lista, tipo) {
         <tr>
             <td><strong>${i + 1}º</strong></td>
             <td>${linkAluno(a)}</td>
-            <td>${a.turma}</td>
+            <td>${window.escapeHtml(a.turma)}</td>
             <td><span class="badge ${tipo === 'atrasos' ? 'bg-warning text-dark' : 'bg-danger'}">${tipo === 'atrasos' ? a.atrasos : a.ocorrencias}</span></td>
         </tr>
     `).join('');

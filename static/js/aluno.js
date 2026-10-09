@@ -33,10 +33,10 @@ async function carregarAluno() {
                 : '<span class="badge bg-info">Saída</span>';
             return `
                 <tr>
-                    <td>${r.data}</td>
+                    <td>${window.escapeHtml(r.data)}</td>
                     <td>${badge}</td>
                     <td>${r.aula}ª aula</td>
-                    <td>${r.motivo}</td>
+                    <td>${window.escapeHtml(r.motivo)}</td>
                 </tr>
             `;
         }).join('');
@@ -54,8 +54,8 @@ async function carregarAluno() {
             else badge = '<span class="badge bg-danger">Suspensão</span>';
             return `
                 <tr>
-                    <td>${o.data}</td>
-                    <td>${o.tipo}</td>
+                    <td>${window.escapeHtml(o.data)}</td>
+                    <td>${window.escapeHtml(o.tipo)}</td>
                     <td>${badge}</td>
                 </tr>
             `;
@@ -69,10 +69,10 @@ async function carregarAluno() {
         } else {
             tbodyMatriculas.innerHTML = matriculas.map(m => `
                 <tr>
-                    <td>${m.ano_letivo}</td>
-                    <td>${m.turma}</td>
-                    <td><span class="badge bg-secondary">${m.status}</span></td>
-                    <td>${m.data_inicio}${m.data_fim ? ` ate ${m.data_fim}` : ' ate atualmente'}</td>
+                    <td>${window.escapeHtml(m.ano_letivo)}</td>
+                    <td>${window.escapeHtml(m.turma)}</td>
+                    <td><span class="badge bg-secondary">${window.escapeHtml(m.status)}</span></td>
+                    <td>${window.escapeHtml(m.data_inicio)}${m.data_fim ? ` ate ${window.escapeHtml(m.data_fim)}` : ' ate atualmente'}</td>
                 </tr>
             `).join('');
         }
@@ -91,7 +91,7 @@ function prepararLinhaTempo(itens) {
     if (filtro) {
         const tipos = Array.from(new Set(linhaTempoCompleta.map(item => item.tipo))).sort();
         filtro.innerHTML = '<option value="">Todos os eventos</option>' +
-            tipos.map(tipo => `<option value="${tipo}">${tipo}</option>`).join('');
+            tipos.map(tipo => `<option value="${window.escapeHtml(tipo)}">${window.escapeHtml(tipo)}</option>`).join('');
         filtro.onchange = () => {
             linhaTempoLimite = 8;
             renderizarLinhaTempo();
@@ -134,17 +134,17 @@ function renderizarLinhaTempo() {
     container.innerHTML = visiveis.map(item => `
         <div class="d-flex gap-3 pb-3 mb-3 border-bottom">
             <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;">
-                <i class="bi ${item.icone || 'bi-dot'}"></i>
+                <i class="bi ${window.escapeHtml(item.icone || 'bi-dot')}"></i>
             </div>
             <div class="flex-grow-1">
                 <div class="d-flex flex-wrap justify-content-between gap-2">
                     <div>
-                        <span class="badge bg-secondary me-2">${item.tipo}</span>
-                        <strong>${item.titulo}</strong>
+                        <span class="badge bg-secondary me-2">${window.escapeHtml(item.tipo)}</span>
+                        <strong>${window.escapeHtml(item.titulo)}</strong>
                     </div>
-                    <small class="text-muted">${item.data}</small>
+                    <small class="text-muted">${window.escapeHtml(item.data)}</small>
                 </div>
-                <div class="text-muted mt-1">${item.descricao || '-'}</div>
+                <div class="text-muted mt-1">${window.escapeHtml(item.descricao || '-')}</div>
             </div>
         </div>
     `).join('');
@@ -159,21 +159,25 @@ async function carregarAnexosAluno() {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum documento anexado.</td></tr>';
         return;
     }
-    tbody.innerHTML = anexos.map(anexo => `
+    tbody.innerHTML = anexos.map(anexo => {
+        const anexoId = Number(anexo.id);
+        const url = `/api/sistema/anexos/${anexoId}/download`;
+        return `
         <tr>
-            <td><a href="${anexo.url}" target="_blank"><i class="bi bi-file-earmark me-1"></i>${anexo.nome_original}</a></td>
-            <td>${anexo.enviado_por_nome || '-'}</td>
+            <td><a href="${url}" target="_blank" rel="noopener"><i class="bi bi-file-earmark me-1"></i>${window.escapeHtml(anexo.nome_original)}</a></td>
+            <td>${window.escapeHtml(anexo.enviado_por_nome || '-')}</td>
             <td>${new Date(anexo.criado_em).toLocaleString('pt-BR')}</td>
             <td>
-                <a class="btn btn-sm btn-outline-success me-1" href="${anexo.url}" target="_blank" title="Abrir">
+                <a class="btn btn-sm btn-outline-success me-1" href="${url}" target="_blank" rel="noopener" title="Abrir">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </a>
-                <button class="btn btn-sm btn-outline-danger" onclick="excluirAnexoAluno(${anexo.id})" title="Excluir">
+                <button class="btn btn-sm btn-outline-danger" onclick="excluirAnexoAluno(${anexoId})" title="Excluir">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 async function excluirAnexoAluno(id) {
@@ -192,11 +196,11 @@ function gerarRelatorio() {
     const logoUrl = `${window.location.origin}/static/img/logo-escola.png`;
 
     const linhasRegistros = registros.map(r =>
-        `<tr><td>${r.data}</td><td>${r.tipo}</td><td>${r.aula}ª aula</td><td>${r.motivo}</td></tr>`
+        `<tr><td>${window.escapeHtml(r.data)}</td><td>${window.escapeHtml(r.tipo)}</td><td>${r.aula}ª aula</td><td>${window.escapeHtml(r.motivo)}</td></tr>`
     ).join('');
 
     const linhasOcorrencias = ocorrencias.map(o =>
-        `<tr><td>${o.data}</td><td>${o.tipo}</td><td>${o.descricao}</td><td>${o.medida}</td></tr>`
+        `<tr><td>${window.escapeHtml(o.data)}</td><td>${window.escapeHtml(o.tipo)}</td><td>${window.escapeHtml(o.descricao)}</td><td>${window.escapeHtml(o.medida)}</td></tr>`
     ).join('');
 
     const conteudo = `
@@ -234,10 +238,10 @@ function gerarRelatorio() {
             <h3>Relatório Individual do Aluno</h3>
             <div class="linha"></div>
 
-            <p><strong>Nome:</strong> ${aluno.nome}</p>
-            <p><strong>Matrícula:</strong> ${aluno.matricula}</p>
-            <p><strong>Turma:</strong> ${aluno.turma}</p>
-            <p><strong>Responsável:</strong> ${aluno.responsavel} — ${aluno.contato_responsavel}</p>
+            <p><strong>Nome:</strong> ${window.escapeHtml(aluno.nome)}</p>
+            <p><strong>Matrícula:</strong> ${window.escapeHtml(aluno.matricula)}</p>
+            <p><strong>Turma:</strong> ${window.escapeHtml(aluno.turma)}</p>
+            <p><strong>Responsável:</strong> ${window.escapeHtml(aluno.responsavel)} — ${window.escapeHtml(aluno.contato_responsavel)}</p>
 
             <div class="resumo">
                 <div class="card-res"><h3>${resumo.total_atrasos}</h3>Atrasos</div>

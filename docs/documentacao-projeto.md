@@ -871,21 +871,22 @@ uvicorn app.main:app --reload
 O projeto possui `railway.json` com comando de inicializacao:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
+APP_ENV=production uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-server-header
 ```
 
 Variaveis necessarias:
 
 ```env
 DATABASE_URL=postgresql://usuario:senha@host:porta/banco
-SECRET_KEY=chave_forte_e_aleatoria
+SECRET_KEY=<chave aleatoria com pelo menos 32 caracteres>
 APP_ENV=production
-ADMIN_EMAIL=admin@teste.com
-ADMIN_PASSWORD=admin123
+ADMIN_EMAIL=<email do administrador inicial>
+ADMIN_PASSWORD=<senha forte do administrador inicial>
 ADMIN_NAME=Administrador
 ```
 
-Observacao: `ADMIN_PASSWORD` cria a senha inicial apenas quando o banco ainda nao possui nenhum usuario.
+Gere uma chave adequada com `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+`ADMIN_EMAIL` e `ADMIN_PASSWORD` sao usados somente quando o banco ainda nao possui nenhum usuario.
 
 ## 18. Tecnologias utilizadas
 

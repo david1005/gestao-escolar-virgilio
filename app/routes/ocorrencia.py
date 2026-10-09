@@ -7,9 +7,10 @@ from app.models.ocorrencia import Ocorrencia
 from app.models.aluno import Aluno, Turma
 from app.schemas.ocorrencia import OcorrenciaCreate, OcorrenciaUpdate
 from app.schemas import ocorrencia as schemas
-from app.auth import get_curso_ids_usuario, get_usuario_atual, tem_permissao
+from app.auth import exigir_acesso_aluno, get_curso_ids_usuario, get_usuario_atual, tem_permissao
 from app.models.usuario import Usuario
 from app.services.ano_letivo import obter_ano_letivo_ativo
+from app.services.notificacoes import notificar_edicao
 
 router = APIRouter()
 
@@ -30,8 +31,14 @@ def registrar_auditoria(db: Session, usuario: Usuario, acao: str, entidade: str,
 @router.post("/ocorrencias/", response_model=schemas.Ocorrencia)
 def criar_ocorrencia(ocorrencia: OcorrenciaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_ocorrencias(db, usuario)
+    exigir_acesso_aluno(db, usuario, ocorrencia.aluno_id)
     ano_letivo = obter_ano_letivo_ativo(db)
-    db_ocorrencia = Ocorrencia(**ocorrencia.model_dump(), ano_letivo_id=ano_letivo.id)
+    db_ocorrencia = Ocorrencia(
+        **ocorrencia.model_dump(),
+        registrado_por=usuario.nome,
+        criado_por_id=usuario.id,
+        ano_letivo_id=ano_letivo.id,
+    )
     db.add(db_ocorrencia)
     db.flush()
     registrar_auditoria(db, usuario, "criou", "ocorrencia", db_ocorrencia.id, f"aluno_id={db_ocorrencia.aluno_id}; tipo={db_ocorrencia.tipo}")
@@ -57,21 +64,13 @@ def listar_ocorrencias(db: Session = Depends(get_db), usuario: Usuario = Depends
 @router.get("/ocorrencias/aluno/{aluno_id}")
 def ocorrencias_por_aluno(aluno_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_ocorrencias(db, usuario)
-    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
-    if not aluno:
-        raise HTTPException(status_code=404, detail="Aluno nao encontrado")
-    if usuario.perfil == "diretor_turma" and aluno.turma_id != usuario.turma_id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
-    if usuario.perfil == "coordenador":
-        turmas = db.query(Turma).filter(Turma.curso_id.in_(get_curso_ids_usuario(usuario))).all()
-        turma_ids = [t.id for t in turmas]
-        if aluno.turma_id not in turma_ids:
-            raise HTTPException(status_code=403, detail="Acesso negado")
+    exigir_acesso_aluno(db, usuario, aluno_id)
     return db.query(Ocorrencia).filter(Ocorrencia.aluno_id == aluno_id).order_by(Ocorrencia.data.desc()).all()
 
 @router.get("/ocorrencias/contar/{aluno_id}")
 def contar_ocorrencias(aluno_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
     exigir_ocorrencias(db, usuario)
+    exigir_acesso_aluno(db, usuario, aluno_id)
     total = db.query(Ocorrencia).filter(Ocorrencia.aluno_id == aluno_id).count()
     if total == 0:
         medida = "Só registro"
@@ -87,6 +86,7 @@ def editar_ocorrencia(ocorrencia_id: int, dados: OcorrenciaUpdate, db: Session =
     ocorrencia = db.query(Ocorrencia).filter(Ocorrencia.id == ocorrencia_id).first()
     if not ocorrencia:
         raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+    exigir_acesso_aluno(db, usuario, ocorrencia.aluno_id)
     ocorrencia.tipo = dados.tipo
     ocorrencia.descricao = dados.descricao
     ocorrencia.medida = dados.medida
@@ -94,8 +94,9 @@ def editar_ocorrencia(ocorrencia_id: int, dados: OcorrenciaUpdate, db: Session =
     ocorrencia.status = dados.status
     ocorrencia.acoes_tomadas = dados.acoes_tomadas
     ocorrencia.responsavel_notificado = dados.responsavel_notificado
-    ocorrencia.editado_por = dados.editado_por
+    ocorrencia.editado_por = usuario.nome
     ocorrencia.editado_em = datetime.now()
+    notificar_edicao(db, 'ocorrencia', ocorrencia, usuario)
     registrar_auditoria(db, usuario, "editou", "ocorrencia", ocorrencia.id, f"aluno_id={ocorrencia.aluno_id}; tipo={ocorrencia.tipo}")
     db.commit()
     db.refresh(ocorrencia)
@@ -107,6 +108,7 @@ def excluir_ocorrencia(ocorrencia_id: int, db: Session = Depends(get_db), usuari
     ocorrencia = db.query(Ocorrencia).filter(Ocorrencia.id == ocorrencia_id).first()
     if not ocorrencia:
         raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+    exigir_acesso_aluno(db, usuario, ocorrencia.aluno_id)
     registrar_auditoria(db, usuario, "excluiu", "ocorrencia", ocorrencia.id, f"aluno_id={ocorrencia.aluno_id}; tipo={ocorrencia.tipo}")
     db.delete(ocorrencia)
     db.commit()

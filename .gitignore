@@ -17,3 +17,10 @@ static/uploads/
 
 .DS_Store
 Thumbs.db
+
+# Local notification verification artifacts
+notificacoes-desktop.png
+notificacoes-mobile.png
+server-notificacoes.log
+server-notificacoes-error.log
+tests/verificar_notificacoes_ui.cjs

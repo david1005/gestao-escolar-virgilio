@@ -7,6 +7,7 @@ class Registro(Base):
     __tablename__ = "registros"
 
     id = Column(Integer, primary_key=True, index=True)
+    criado_por_id = Column(Integer, nullable=True)
     aluno_id = Column(Integer, ForeignKey("alunos.id"), nullable=False)
     data = Column(Date, nullable=False)
     tipo = Column(String, nullable=False)  # "Atraso" ou "Saída antecipada"

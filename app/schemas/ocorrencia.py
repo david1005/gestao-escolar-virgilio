@@ -11,7 +11,6 @@ class OcorrenciaBase(BaseModel):
     gravidade: str = "Leve"
     status: str = "Aberta"
     acoes_tomadas: Optional[str] = None
-    registrado_por: str
     responsavel_notificado: bool = False
     numero_ocorrencia: int
 
@@ -26,10 +25,10 @@ class OcorrenciaUpdate(BaseModel):
     status: str
     acoes_tomadas: Optional[str] = None
     responsavel_notificado: bool
-    editado_por: str
 
 class Ocorrencia(OcorrenciaBase):
     id: int
+    registrado_por: str
     editado_por: Optional[str] = None
     editado_em: Optional[datetime] = None
     class Config:

@@ -7,6 +7,15 @@ function getCookieValue(nome) {
         .join('=') || '';
 }
 
+window.escapeHtml = function(valor) {
+    return String(valor ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+};
+
 const fetchOriginal = window.fetch.bind(window);
 
 window.fetch = function(url, options = {}) {

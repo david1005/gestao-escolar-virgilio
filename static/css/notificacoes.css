@@ -1,0 +1,16 @@
+.notificacoes-sino { width: 42px; height: 42px; position: relative; }
+.notificacoes-sino .notificacoes-contador { position: absolute; top: -4px; right: -4px; font-size: 10px; }
+.notificacoes-menu { width: 360px; max-width: calc(100vw - 32px); padding: 0; border-radius: 6px; }
+#notificacoesRecentes { max-height: min(480px, 60vh); overflow-y: auto; }
+.notificacao-item { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--bs-border-color); }
+.notificacao-item.nao-lida { background: var(--bs-tertiary-bg); }
+.notificacao-item a { color: var(--bs-body-color); text-decoration: none; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.notificacao-item p { margin: 4px 0; font-size: 13px; }
+.notificacao-item time { font-size: 12px; color: var(--bs-secondary-color); }
+.notificacao-item .btn { flex-shrink: 0; align-self: center; }
+.notificacoes-lista { border-top: 1px solid var(--bs-border-color); }
+.notificacoes-lista .notificacao-item { padding: 18px 0; }
+@media (max-width: 991px) {
+    .notificacoes-menu { position: static !important; margin-top: 8px; }
+    #notificacoesRecentes { max-height: 35vh; }
+}
