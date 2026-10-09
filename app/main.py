@@ -285,6 +285,14 @@ async def pagina_manual(request: Request):
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(request, "manual.html", contexto_usuario(usuario))
 
+@app.get('/notificacoes/preferencias')
+async def pagina_preferencias_notificacao(request: Request):
+    usuario = get_usuario_logado(request)
+    if not usuario:
+        return RedirectResponse(url='/login')
+    return templates.TemplateResponse(request, 'preferencias_notificacoes.html', contexto_usuario(usuario))
+
+
 @app.get('/notificacoes')
 async def pagina_notificacoes(request: Request):
     usuario = get_usuario_logado(request)

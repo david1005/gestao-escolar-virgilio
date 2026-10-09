@@ -21,6 +21,15 @@ class Notificacao(Base):
     atualizada_em = Column(DateTime, nullable=False, default=datetime.now)
 
 
+class PreferenciaNotificacao(Base):
+    __tablename__ = 'preferencias_notificacao'
+
+    usuario_id = Column(Integer, primary_key=True)
+    ocorrencia_antiga = Column(Boolean, nullable=False, default=True)
+    retorno_pendente = Column(Boolean, nullable=False, default=True)
+    alteracao = Column(Boolean, nullable=False, default=True)
+
+
 class TentativaLogin(Base):
     __tablename__ = 'tentativas_login'
 

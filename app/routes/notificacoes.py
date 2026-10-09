@@ -3,13 +3,40 @@ from math import ceil
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, ConfigDict, StrictBool
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from app.auth import get_usuario_atual
 from app.database import get_db
-from app.models.notificacao import Notificacao
+from app.models.notificacao import Notificacao, PreferenciaNotificacao
+from app.services.preferencias_notificacao import preferencias_usuario
 from app.models.usuario import Usuario
 from app.services.notificacoes import sincronizar, notificacoes_visiveis, MODELOS, pode_ver
 
 router = APIRouter()
+
+
+class PreferenciasForm(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    ocorrencia_antiga: StrictBool
+    retorno_pendente: StrictBool
+    alteracao: StrictBool
+
+
+@router.get('/notificacoes/preferencias')
+def obter_preferencias(db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    return {**preferencias_usuario(db, usuario.id), 'seguranca': usuario.perfil == 'admin'}
+
+
+@router.put('/notificacoes/preferencias')
+def salvar_preferencias(dados: PreferenciasForm, db: Session = Depends(get_db), usuario: Usuario = Depends(get_usuario_atual)):
+    valores = dados.model_dump()
+    insert = pg_insert if db.get_bind().dialect.name == 'postgresql' else sqlite_insert
+    comando = insert(PreferenciaNotificacao).values(usuario_id=usuario.id, **valores)
+    db.execute(comando.on_conflict_do_update(index_elements=['usuario_id'], set_=valores))
+    db.expire_all()
+    db.commit()
+    return obter_preferencias(db, usuario)
 
 
 def serializar(n):

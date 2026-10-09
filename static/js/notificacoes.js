@@ -10,7 +10,10 @@
         </button>
         <div class="dropdown-menu dropdown-menu-end notificacoes-menu">
             <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
-                <strong>Notificações</strong><button type="button" class="btn btn-sm btn-link" data-ler-todas title="Marcar todas como lidas"><i class="bi bi-check2-all"></i></button>
+                <strong>Notificações</strong><div class="d-flex gap-1">
+                    <a class="btn btn-sm btn-link" href="/notificacoes/preferencias" title="Preferências de notificações" aria-label="Preferências de notificações"><i class="bi bi-sliders"></i></a>
+                    <button type="button" class="btn btn-sm btn-link" data-ler-todas title="Marcar todas como lidas"><i class="bi bi-check2-all"></i></button>
+                </div>
             </div>
             <div id="notificacoesRecentes" aria-live="polite"></div>
             <a class="d-block text-center p-3" href="/notificacoes">Todas as notificações</a>
@@ -82,6 +85,10 @@
         finally { botao.disabled = false; }
     });
     item.addEventListener('show.bs.dropdown', atualizarResumo);
+    document.addEventListener('preferenciasnotificacoesalteradas', () => {
+        atualizarResumo();
+        carregarHistorico();
+    });
     setInterval(() => { if (!document.hidden) atualizarResumo(); }, 300000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarResumo(); });
     if (lista) {

@@ -9,6 +9,7 @@ from app.models.notificacao import Notificacao
 from app.models.ocorrencia import Ocorrencia
 from app.models.registro import Registro
 from app.models.usuario import Usuario
+from app.services.preferencias_notificacao import preferencias_usuario
 
 
 MODELOS = {'ocorrencia': Ocorrencia, 'registro': Registro}
@@ -48,6 +49,7 @@ def gravar(db, usuario_id, chave, tipo, titulo, mensagem, entidade=None, entidad
 
 def sincronizar(db, usuario):
     desejadas = set()
+    preferencias = preferencias_usuario(db, usuario.id)
     regras = [
         ('ocorrencia', 'ocorrencia_antiga', db.query(Ocorrencia).filter(
             Ocorrencia.status.in_(['Aberta', 'Em acompanhamento']),
@@ -59,6 +61,8 @@ def sincronizar(db, usuario):
             'Retorno não confirmado', 'Saída temporária com retorno pendente.'),
     ]
     for entidade, tipo, query, titulo, mensagem in regras:
+        if not preferencias[tipo]:
+            continue
         if not tem_permissao(db, usuario, MODULOS[entidade]):
             continue
         for item in query.all():
@@ -71,7 +75,7 @@ def sincronizar(db, usuario):
         Notificacao.usuario_id == usuario.id,
         Notificacao.tipo.in_(['ocorrencia_antiga', 'retorno_pendente']),
         Notificacao.ativa == True).all():
-        if n.chave_deduplicacao not in desejadas:
+        if preferencias[n.tipo] and n.chave_deduplicacao not in desejadas:
             n.ativa = False
             n.lida_em = n.lida_em or datetime.now()
     db.flush()
@@ -79,12 +83,15 @@ def sincronizar(db, usuario):
 
 def notificacoes_visiveis(db, usuario):
     resultado = []
+    preferencias = preferencias_usuario(db, usuario.id)
     for n in db.query(Notificacao).filter_by(usuario_id=usuario.id).order_by(
         Notificacao.atualizada_em.desc(), Notificacao.id.desc()).all():
         if n.tipo == 'seguranca':
             if usuario.perfil == 'admin' and usuario.ativo:
                 resultado.append(n)
         elif n.entidade in MODELOS:
+            if not preferencias.get(n.tipo, False):
+                continue
             item = db.get(MODELOS[n.entidade], n.entidade_id)
             if item and pode_ver(db, usuario, n.entidade, item):
                 resultado.append(n)
@@ -97,6 +104,8 @@ def notificar_edicao(db, entidade, item, editor):
         return
     criador = db.get(Usuario, criador_id)
     if not criador or not pode_ver(db, criador, entidade, item):
+        return
+    if not preferencias_usuario(db, criador.id)['alteracao']:
         return
     anterior = db.query(Notificacao).filter_by(usuario_id=criador.id,
         tipo='alteracao', entidade=entidade, entidade_id=item.id, ativa=True,

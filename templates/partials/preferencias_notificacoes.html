@@ -1,0 +1,36 @@
+<form id="formPreferenciasNotificacoes" style="max-width: 720px;">
+    <h5 class="fw-semibold mb-3">Minhas notificações</h5>
+    <fieldset id="camposPreferenciasNotificacoes" disabled>
+        <div class="d-flex justify-content-between align-items-center gap-3 py-3 border-bottom">
+            <label for="prefOcorrenciaAntiga" class="mb-0">Ocorrências abertas há mais de 15 dias</label>
+            <div class="form-check form-switch mb-0 flex-shrink-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="prefOcorrenciaAntiga" name="ocorrencia_antiga">
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center gap-3 py-3 border-bottom">
+            <label for="prefRetornoPendente" class="mb-0">Saídas com retorno não confirmado</label>
+            <div class="form-check form-switch mb-0 flex-shrink-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="prefRetornoPendente" name="retorno_pendente">
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center gap-3 py-3 border-bottom">
+            <label for="prefAlteracao" class="mb-0">Meus registros ou ocorrências alterados por outra pessoa</label>
+            <div class="form-check form-switch mb-0 flex-shrink-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="prefAlteracao" name="alteracao">
+            </div>
+        </div>
+        {% if perfil == 'admin' %}
+        <div class="d-flex justify-content-between align-items-center gap-3 py-3 border-bottom">
+            <label for="prefSeguranca" class="mb-0">Muitas falhas de login <span class="small text-muted d-block">Obrigatório para administradores</span></label>
+            <div class="form-check form-switch mb-0 flex-shrink-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="prefSeguranca" checked disabled>
+            </div>
+        </div>
+        {% endif %}
+        <button class="btn btn-primary mt-4" type="submit" id="salvarPreferenciasNotificacoes"><i class="bi bi-check-lg me-2"></i>Salvar preferências</button>
+    </fieldset>
+    <div class="d-flex align-items-center gap-2 mt-3">
+        <span id="statusPreferenciasNotificacoes" class="small text-muted" role="status">Carregando preferências...</span>
+        <button class="btn btn-sm btn-outline-secondary" type="button" id="recarregarPreferenciasNotificacoes" title="Tentar novamente" aria-label="Tentar novamente" hidden><i class="bi bi-arrow-clockwise"></i></button>
+    </div>
+</form>

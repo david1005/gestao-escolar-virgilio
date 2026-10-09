@@ -21,6 +21,8 @@ Thumbs.db
 # Local notification verification artifacts
 notificacoes-desktop.png
 notificacoes-mobile.png
+preferencias-notificacoes-desktop.png
+preferencias-notificacoes-mobile.png
 server-notificacoes.log
 server-notificacoes-error.log
 tests/verificar_notificacoes_ui.cjs

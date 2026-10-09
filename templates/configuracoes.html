@@ -10,7 +10,8 @@
     <script src="/static/js/theme.js?v=1"></script>
     <script src="/static/js/security.js?v=2"></script>
     <link href="/static/css/notificacoes.css?v=1" rel="stylesheet">
-    <script src="/static/js/notificacoes.js?v=1" defer></script>
+    <script src="/static/js/notificacoes.js?v=2" defer></script>
+    <script src="/static/js/preferencias_notificacoes.js?v=1" defer></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -64,6 +65,7 @@
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCursosTurmas">Cursos e turmas</button></li>
             {% endif %}
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabListas">Listas</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabNotificacoes">Notificações</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPermissoes">Permissões</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRelatorios">Relatórios PDF</button></li>
             {% if perfil == 'admin' %}
@@ -74,6 +76,9 @@
         </ul>
 
         <div class="tab-content">
+            <div class="tab-pane fade" id="tabNotificacoes">
+                {% include 'partials/preferencias_notificacoes.html' %}
+            </div>
             <div class="tab-pane fade show active" id="tabEscola">
                 <div class="card shadow-sm"><div class="card-body">
                     <div class="row g-3">

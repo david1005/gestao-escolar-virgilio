@@ -9,7 +9,9 @@ from app.models.aluno import Aluno, Turma
 from app.models.usuario import Usuario
 from app.models.ocorrencia import Ocorrencia
 from app.models.registro import Registro
-from app.models.notificacao import Notificacao
+from app.models.notificacao import Notificacao, PreferenciaNotificacao
+from app.routes.notificacoes import obter_preferencias, salvar_preferencias, PreferenciasForm
+from pydantic import ValidationError
 from app.services.notificacoes import sincronizar, notificar_edicao, notificacoes_visiveis
 from app.routes.notificacoes import ler
 from app.routes.notificacoes import abrir, listar
@@ -132,3 +134,37 @@ class NotificacoesTests(unittest.TestCase):
         sincronizar(self.db, self.diretor)
         self.assertEqual(n.atualizada_em, instante)
         self.assertIsNotNone(n.lida_em)
+
+    def test_preferencias_padrao_e_isolamento_por_conta(self):
+        self.assertTrue(obter_preferencias(self.db, self.diretor)['ocorrencia_antiga'])
+        dados = PreferenciasForm(ocorrencia_antiga=False, retorno_pendente=True, alteracao=True)
+        salvar_preferencias(dados, self.db, self.diretor)
+        self.db.expire_all()
+        self.assertFalse(obter_preferencias(self.db, self.diretor)['ocorrencia_antiga'])
+        self.assertTrue(obter_preferencias(self.db, self.admin)['ocorrencia_antiga'])
+        self.assertEqual(self.db.query(PreferenciaNotificacao).one().usuario_id, self.diretor.id)
+
+    def test_desativar_oculta_alertas_existentes_sem_apagar(self):
+        sincronizar(self.db, self.diretor)
+        salvar_preferencias(PreferenciasForm(ocorrencia_antiga=False, retorno_pendente=True, alteracao=True), self.db, self.diretor)
+        self.assertEqual(notificacoes_visiveis(self.db, self.diretor), [])
+        self.assertEqual(self.db.query(Notificacao).count(), 1)
+        salvar_preferencias(PreferenciasForm(ocorrencia_antiga=True, retorno_pendente=True, alteracao=True), self.db, self.diretor)
+        self.assertEqual(len(notificacoes_visiveis(self.db, self.diretor)), 1)
+
+    def test_alertas_desativados_nao_sao_gerados(self):
+        salvar_preferencias(PreferenciasForm(ocorrencia_antiga=False, retorno_pendente=False, alteracao=False), self.db, self.diretor)
+        sincronizar(self.db, self.diretor)
+        notificar_edicao(self.db, 'ocorrencia', self.oc, self.admin)
+        self.assertEqual(self.db.query(Notificacao).count(), 0)
+
+    def test_seguranca_obrigatoria_e_destinatario_nao_controlavel(self):
+        for campo in ('seguranca', 'usuario_id'):
+            with self.subTest(campo=campo), self.assertRaises(ValidationError):
+                PreferenciasForm.model_validate({'ocorrencia_antiga': True, 'retorno_pendente': True, 'alteracao': True, campo: False})
+        salvar_preferencias(PreferenciasForm(ocorrencia_antiga=False, retorno_pendente=False, alteracao=False), self.db, self.admin)
+        self.db.add(Notificacao(usuario_id=self.admin.id, tipo='seguranca', titulo='Login', mensagem='Bloqueio', chave_deduplicacao='seguranca:1'))
+        self.db.flush()
+        self.assertEqual(len(notificacoes_visiveis(self.db, self.admin)), 1)
+        self.assertTrue(obter_preferencias(self.db, self.admin)['seguranca'])
+        self.assertFalse(obter_preferencias(self.db, self.diretor)['seguranca'])
